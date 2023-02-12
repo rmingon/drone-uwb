@@ -1,6 +1,6 @@
 # AUTOMATIC DRONE FLY PROJECT
 
-### This project exist for make automatic positioning and fling with UWB (ultra wide band) technology
+### This project exist for make automatic positioning and flying with UWB (ultra wide band) technology
 
 
 
