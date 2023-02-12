@@ -1,0 +1,25 @@
+{
+  "name": "server",
+  "version": "1.0.0",
+  "description": "server code for manage base and drone position",
+  "main": "index.ts",
+  "scripts": {
+    "test": "npx tsc -w",
+    "build": "npx tsc && node ./build/index.js",
+    "build:watch": "npx tsc -w && ./build/index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/rmingon/drone-uwb.git"
+  },
+  "author": "RMINGON",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/rmingon/drone-uwb/issues"
+  },
+  "homepage": "https://github.com/rmingon/drone-uwb#readme",
+  "devDependencies": {
+    "@types/node": "^18.13.0",
+    "typescript": "^4.9.5"
+  }
+}
