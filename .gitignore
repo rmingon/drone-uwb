@@ -1,4 +1,8 @@
 *.zip
+*.gbr
+*.drl
+*.gbrjob
 
 */**/build
 */**/node_modules
+
