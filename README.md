@@ -10,14 +10,15 @@
 
 #### SCHEMATIC VIEW
 
-![SCHEMATIC VIEW](https://github.com/rmingon/drone-uwb/blob/main/schematic_pcb.png?raw=true)
+![SCHEMATIC VIEW](https://github.com/rmingon/drone-uwb/blob/main/drone/schematic_pcb.png?raw=true)
 
 #### PCB VIEW
 
-![PCB VIEW](https://github.com/rmingon/drone-uwb/blob/main/pcb.png?raw=true)
+![PCB VIEW](https://github.com/rmingon/drone-uwb/blob/main/drone/pcb.png?raw=true)
 
 #### 3D VIEW
 
-![3D VIEW](https://github.com/rmingon/drone-uwb/blob/main/3d_pcb.png?raw=true)
+![3D VIEW](https://github.com/rmingon/drone-uwb/blob/main/drone/3d_pcb.png?raw=true)
 
 ### BASE
+
