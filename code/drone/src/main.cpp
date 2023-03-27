@@ -66,7 +66,6 @@ void setup() {
 
   DW1000Ng::setAntennaDelay(16436);
   Serial.println(F("Committed configuration ..."));
-  // DEBUG chip info and registers pretty printed
   char msg[128];
   DW1000Ng::getPrintableDeviceIdentifier(msg);
   Serial.print("Device ID: "); Serial.println(msg);
@@ -79,11 +78,12 @@ void setup() {
 }
 
 void loop() {
+  /*
   transmit();
   Serial.print("ARDUINO delay sent [ms] ... "); Serial.println(millis() - delaySent);
   uint64_t newSentTime = DW1000Ng::getTransmitTimestamp();
   Serial.print("Processed packet ... #"); Serial.println(sentNum);
-
+  */
   mpu.update();
   int x = map(mpu.getAngleX(), 0, 100, 0, 20);
   int y = map(mpu.getAngleY(), 0, 100, 0, 20);
@@ -107,7 +107,7 @@ void loop() {
   } else {
     motor.rr(0);
   }
-  
+
   if (bmp.takeForcedMeasurement()) {
     // can now print out the new measurements
     Serial.print(F("Temperature = "));
@@ -121,5 +121,5 @@ void loop() {
     Serial.print(F("Approx altitude = "));
     Serial.print(bmp.readAltitude(1013.25)); /* Adjusted to local forecast! */
     Serial.println(" m");
-  }
+  }   
 }
