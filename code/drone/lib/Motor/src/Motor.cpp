@@ -10,13 +10,13 @@ Motor::Motor() {
 };
 
 void Motor::init() {
-  ledcSetup(0, 1000, 8);
+  ledcSetup(0, 5000, 8);
   ledcAttachPin(PIN_RF, 0);
-  ledcSetup(1, 1000, 8);
+  ledcSetup(1, 5000, 8);
   ledcAttachPin(PIN_RR, 1);
-  ledcSetup(2, 1000, 8);
+  ledcSetup(2, 5000, 8);
   ledcAttachPin(PIN_LR, 2);
-  ledcSetup(3, 1000, 8);
+  ledcSetup(3, 5000, 8);
   ledcAttachPin(PIN_LF, 3);
   setPwn(0);
 }
