@@ -85,8 +85,8 @@ void loop() {
   Serial.print("Processed packet ... #"); Serial.println(sentNum);
   */
   mpu.update();
-  int x = map(mpu.getAngleX(), 0, 100, 0, 20);
-  int y = map(mpu.getAngleY(), 0, 100, 0, 20);
+  int x = map(mpu.getAngleX(), 0, 100, 0, 50);
+  int y = map(mpu.getAngleY(), 0, 100, 0, 50);
   if (-y+x > 0) {
     motor.lf(-y+x);
   } else {
