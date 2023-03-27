@@ -6,6 +6,9 @@
 #include <Motor.h>
 #include <Adafruit_BMP280.h>
 
+
+#define MIN_MOTOR_PWM 3
+
 MPU6050 mpu(Wire);
 
 Adafruit_BMP280 bmp;
@@ -14,6 +17,9 @@ volatile unsigned long delaySent = 0;
 int16_t sentNum = 0;
 
 Motor motor = Motor();
+
+uint32_t altitude_forced = 0;
+uint32_t altitude = 0;
 
 device_configuration_t DEFAULT_CONFIG = {
     false,
@@ -41,9 +47,13 @@ void transmit() {
 }
 
 void setup() {
-  Serial.begin(115200);
-  Wire.begin();
+  Serial.begin(460800);
+  Wire.begin(21, 22, 400000);
   
+  uint32_t Freq = getCpuFrequencyMhz();
+  Serial.print("CPU Freq = ");
+  Serial.print(Freq);
+
   mpu.begin();
   mpu.calcOffsets();
 
@@ -78,48 +88,44 @@ void setup() {
 }
 
 void loop() {
-  /*
+  
   transmit();
   Serial.print("ARDUINO delay sent [ms] ... "); Serial.println(millis() - delaySent);
   uint64_t newSentTime = DW1000Ng::getTransmitTimestamp();
   Serial.print("Processed packet ... #"); Serial.println(sentNum);
-  */
+  
+
+  if (bmp.takeForcedMeasurement()) {
+    altitude = bmp.readAltitude(1013.25);
+    if (altitude_forced == 0) {
+      altitude_forced = altitude;
+    }
+  }
+
   mpu.update();
   int x = map(mpu.getAngleX(), 0, 100, 0, 50);
   int y = map(mpu.getAngleY(), 0, 100, 0, 50);
+  int alti = map(altitude, altitude_forced-50, altitude_forced+50, 0, 200);
   if (-y+x > 0) {
-    motor.lf(-y+x);
+    motor.lf(-y+x + MIN_MOTOR_PWM);
   } else {
-    motor.lf(0);
+    motor.lf(0 + MIN_MOTOR_PWM);
   }
   if (y+x > 0) {
-    motor.lr(y+x);
+    motor.lr(y+x + MIN_MOTOR_PWM);
   } else {
-    motor.lr(0);
+    motor.lr(0 + MIN_MOTOR_PWM);
   }
   if (-y+-x > 0) {
-    motor.rl(-y+-x);
+    motor.rl(-y+-x + MIN_MOTOR_PWM);
   } else {
-    motor.rl(0);
+    motor.rl(0 + MIN_MOTOR_PWM);
   }
   if (y+-x > 0) {
-    motor.rr(y+-x);
+    motor.rr(y+-x + MIN_MOTOR_PWM);
   } else {
-    motor.rr(0);
+    motor.rr(0 + MIN_MOTOR_PWM);
   }
 
-  if (bmp.takeForcedMeasurement()) {
-    /*
-    Serial.print(F("Temperature = "));
-    Serial.print(bmp.readTemperature());
-    Serial.println(" *C");
-
-    Serial.print(F("Pressure = "));
-    Serial.print(bmp.readPressure());
-    Serial.println(" Pa");
-    */
-    Serial.print(F("Approx altitude = "));
-    Serial.print(bmp.readAltitude(1013.25)); /* Adjusted to local forecast! */
-    Serial.println(" m");
-  }   
+  Serial.println(alti);
 }
