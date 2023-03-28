@@ -4,6 +4,7 @@
 #include <MPU6050_light.h>
 #include <Motor.h>
 #include <Adafruit_BMP280.h>
+#include <Conf.h>
 
 #include "DW1000.h"
 
@@ -37,14 +38,11 @@ DW1000Time timeRangeSent;
 // data buffer
 #define LEN_DATA 16
 byte data[LEN_DATA];
-// watchdog and reset period
 uint32_t lastActivity;
 uint32_t resetPeriod = 250;
-// reply times (same on both sides for symm. ranging)
 uint16_t replyDelayTimeUS = 3000;
 
 void noteActivity() {
-    // update activity timestamp, so that we do not reach "resetPeriod"
     lastActivity = millis();
 }
 
@@ -99,10 +97,6 @@ void receiver() {
 void setup() {
   Serial.begin(460800);
   Wire.begin(21, 22, 400000);
-  
-  uint32_t Freq = getCpuFrequencyMhz();
-  Serial.print("CPU Freq = ");
-  Serial.print(Freq);
 
   mpu.begin();
   mpu.calcOffsets();
@@ -141,19 +135,16 @@ void setup() {
 void loop() {
 
   if (!sentAck && !receivedAck) {
-      // check if inactive
       if (millis() - lastActivity > resetPeriod) {
           resetInactive();
       }
       return;
   }
-  // continue on any success confirmation
   if (sentAck) {
       sentAck = false;
       byte msgId = data[0];
       if (msgId == POLL) {
           DW1000.getTransmitTimestamp(timePollSent);
-          //Serial.print("Sent POLL @ "); Serial.println(timePollSent.getAsFloat());
       } else if (msgId == RANGE) {
           DW1000.getTransmitTimestamp(timeRangeSent);
           noteActivity();
@@ -195,8 +186,8 @@ void loop() {
   }
 
   mpu.update();
-  int x = map(mpu.getAngleX(), 0, 100, 0, 200);
-  int y = map(mpu.getAngleY(), 0, 100, 0, 200);
+  int x = map(mpu.getAngleX(), 0, 100, 10, 200);
+  int y = map(mpu.getAngleY(), 0, 100, 10, 200);
   int alti = map(altitude, altitude_forced-50, altitude_forced+50, 0, 200);
   if (-y+x > 0) {
     motor.lf(-y+x);
