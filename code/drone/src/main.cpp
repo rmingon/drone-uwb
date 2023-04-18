@@ -7,8 +7,31 @@
 #include <Conf.h>
 
 #include "DW1000.h"
+#include <NeoPixelBus.h>
 
-#define MIN_MOTOR_PWM 5
+#include "WiFi.h"
+#include "AsyncUDP.h"
+
+AsyncUDP udp;
+
+char packetBuffer[255];
+unsigned int localPort = 9999;
+
+#define SSID "NETGEAR41"
+#define PASS "royalgiant308"
+
+const uint16_t PixelCount = 1; // this example assumes 4 pixels, making it smaller will cause a failure
+const uint8_t PixelPin = 14;  // make sure to set this to the correct pin, ignored for Esp8266
+
+NeoPixelBus<NeoGrbFeature, NeoWs2812xMethod> strip(PixelCount, PixelPin);
+
+RgbColor red(128, 0, 0);
+RgbColor blue(0, 128, 0);
+RgbColor green(0, 0, 128);
+
+#define MIN_MOTOR_PWM 20
+
+uint8_t motor_dynamic = 0;
 
 MPU6050 mpu(Wire);
 
@@ -18,6 +41,8 @@ Motor motor = Motor();
 
 uint32_t altitude_forced = 0;
 uint32_t altitude = 0;
+
+boolean fly = false;
 
 // messages used in the ranging protocol
 // TODO replace by enum
@@ -42,6 +67,8 @@ uint32_t lastActivity;
 uint32_t resetPeriod = 250;
 uint16_t replyDelayTimeUS = 3000;
 
+uint8_t battery_pin = 13;
+
 void noteActivity() {
     lastActivity = millis();
 }
@@ -61,12 +88,12 @@ void resetInactive() {
     noteActivity();
 }
 
-void handleSent() {
+void IRAM_ATTR handleSent() {
     // status change on sent success
     sentAck = true;
 }
 
-void handleReceived() {
+void IRAM_ATTR handleReceived() {
     // status change on received success
     receivedAck = true;
 }
@@ -94,14 +121,91 @@ void receiver() {
     DW1000.startReceive();
 }
 
+void i2cScan() {
+  Wire.begin(21, 22, 400000);
+  byte error, address;
+  int nDevices;
+
+  Serial.println("Scanning...");
+
+  nDevices = 0;
+  for(address = 1; address < 127; address++ ) 
+  {
+    // The i2c_scanner uses the return value of
+    // the Write.endTransmisstion to see if
+    // a device did acknowledge to the address.
+    Wire.beginTransmission(address);
+    error = Wire.endTransmission();
+
+    if (error == 0)
+    {
+      Serial.print("I2C device found at address 0x");
+      if (address<16) 
+        Serial.print("0");
+      Serial.print(address,HEX);
+      Serial.println("  !");
+
+      nDevices++;
+    }
+    else if (error==4) 
+    {
+      Serial.print("Unknown error at address 0x");
+      if (address<16) 
+        Serial.print("0");
+      Serial.println(address,HEX);
+    }    
+  }
+  if (nDevices == 0)
+    Serial.println("No I2C devices found\n");
+  else
+    Serial.println("done\n");
+}
+
 void setup() {
+  WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);
+
   Serial.begin(460800);
   Wire.begin(21, 22, 400000);
 
-  mpu.begin();
-  mpu.calcOffsets();
+  strip.Begin();
+
+  strip.SetPixelColor(0, red);
+  strip.Show();
 
   motor.init();
+  motor.setPwn(0);
+
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(SSID, PASS);
+  if (WiFi.waitForConnectResult() != WL_CONNECTED) {
+      Serial.println("WiFi Failed");
+      while(1) {
+          delay(1000);
+      }
+  }
+  if(udp.listen(1234)) {
+    udp.onPacket([](AsyncUDPPacket packet) {
+        String myString = (const char*)packet.data();
+        if (myString == "F") {
+          fly = true;
+        } else if (myString == "S") {
+          fly = false;
+          motor.setPwn(0);
+        } else if (myString.substring(0,1) == "M") {
+          motor_dynamic = myString.substring(1).toInt();
+        }
+      });
+  }
+
+  strip.SetPixelColor(0, blue);
+  strip.Show();
+
+  i2cScan();
+
+  pinMode(battery_pin, INPUT_PULLUP);
+
+  mpu.begin();
+  mpu.calcOffsets();
 
   bmp.begin(0x76);
   
@@ -130,6 +234,9 @@ void setup() {
   receiver();
   transmitPoll();
   noteActivity();
+
+  strip.SetPixelColor(0, green);
+  strip.Show();
 }
 
 void loop() {
@@ -186,29 +293,45 @@ void loop() {
   }
 
   mpu.update();
+  /*
+
+  Serial.println(mpu.getAngleX());
+  Serial.println(mpu.getAngleY());
+  Serial.println(bmp.readAltitude(1013.25));
+  */
+  // Serial.println(analogRead(battery_pin));
+
   int x = map(mpu.getAngleX(), 0, 100, 10, 200);
   int y = map(mpu.getAngleY(), 0, 100, 10, 200);
+
   int alti = map(altitude, altitude_forced-50, altitude_forced+50, 0, 200);
-  if (-y+x > 0) {
-    motor.lf(-y+x);
-  } else {
-    motor.lf(0);
-  }
-  if (y+x > 0) {
-    motor.lr(y+x);
-  } else {
-    motor.lr(0);
-  }
-  if (-y+-x > 0) {
-    motor.rl(-y+-x);
-  } else {
-    motor.rl(0);
-  }
-  if (y+-x > 0) {
-    motor.rr(y+-x);
-  } else {
-    motor.rr(0);
+
+  if (fly) {
+    if (-y+x > 0) {
+      motor.lf(-y+x + MIN_MOTOR_PWM + motor_dynamic);
+    } else {
+      motor.lf(MIN_MOTOR_PWM + motor_dynamic);
+    }
+    if (y+x > 0) {
+      motor.lr(y+x + MIN_MOTOR_PWM + motor_dynamic);
+    } else {
+      motor.lr(MIN_MOTOR_PWM + motor_dynamic);
+    }
+    if (-y+-x > 0) {
+      motor.rl(-y+-x + MIN_MOTOR_PWM + motor_dynamic);
+    } else {
+      motor.rl(MIN_MOTOR_PWM + motor_dynamic);
+    }
+    if (y+-x > 0) {
+      motor.rr(y+-x + MIN_MOTOR_PWM + motor_dynamic);
+    } else {
+      motor.rr(MIN_MOTOR_PWM + motor_dynamic);
+    }
   }
 
-  Serial.println(alti);
+
+  // delay(1000);
+
+  // Serial.println(alti);
 }
+
