@@ -5,7 +5,8 @@
 #include <Motor.h>
 #include <Adafruit_BMP280.h>
 #include <Conf.h>
-
+#include "soc/soc.h"
+#include "soc/rtc_cntl_reg.h"
 #include "DW1000.h"
 #include <NeoPixelBus.h>
 
