@@ -4,6 +4,8 @@
 
 ## WITH MOTOR -> [VIDEO](https://youtube.com/shorts/Sa2Nf204R9k?feature=share)
 
+## READY FOR FLY -> [VIDEO](https://www.youtube.com/shorts/XvAniwky4LE?feature=share)
+
 ### This project exist for make automatic positioning and flying with UWB (ultra wide band) technology
 
 ## DRONE
