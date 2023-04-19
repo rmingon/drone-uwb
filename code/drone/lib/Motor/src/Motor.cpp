@@ -64,3 +64,7 @@ void Motor::lr(uint8_t pwm) {
   ledcWrite(3, pwm);
 }
 
+void Motor::test() {
+  
+}
+

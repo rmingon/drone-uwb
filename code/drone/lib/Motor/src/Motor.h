@@ -16,6 +16,7 @@ class Motor {
     void rr(uint8_t);
     void lr(uint8_t);
     void lf(uint8_t);
+    void test();
 };
 
 #endif
