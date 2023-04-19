@@ -11,18 +11,20 @@
 #include <NeoPixelBus.h>
 
 #include "WiFi.h"
-#include "AsyncUDP.h"
+#include <ArduinoWebsockets.h>
 
-AsyncUDP udp;
+#define ID 1
 
-char packetBuffer[255];
-unsigned int localPort = 9999;
+const char* websockets_server_host = "192.168.1.5"; //Enter server adress
+const uint16_t websockets_server_port = 8081; // Enter server port
+using namespace websockets;
+WebsocketsClient client;
 
 #define SSID "NETGEAR41"
 #define PASS "royalgiant308"
 
-const uint16_t PixelCount = 1; // this example assumes 4 pixels, making it smaller will cause a failure
-const uint8_t PixelPin = 14;  // make sure to set this to the correct pin, ignored for Esp8266
+const uint16_t PixelCount = 1;
+const uint8_t PixelPin = 14; 
 
 NeoPixelBus<NeoGrbFeature, NeoWs2812xMethod> strip(PixelCount, PixelPin);
 
@@ -83,19 +85,16 @@ void transmitPoll() {
 }
 
 void resetInactive() {
-    // tag sends POLL and listens for POLL_ACK
     expectedMsgId = POLL_ACK;
     transmitPoll();
     noteActivity();
 }
 
 void IRAM_ATTR handleSent() {
-    // status change on sent success
     sentAck = true;
 }
 
 void IRAM_ATTR handleReceived() {
-    // status change on received success
     receivedAck = true;
 }
 
@@ -103,7 +102,6 @@ void transmitRange() {
     DW1000.newTransmit();
     DW1000.setDefaults();
     data[0] = RANGE;
-    // delay sending the message and remember expected future sent timestamp
     DW1000Time deltaTime = DW1000Time(replyDelayTimeUS, DW1000Time::MICROSECONDS);
     timeRangeSent = DW1000.setDelay(deltaTime);
     timePollSent.getTimestamp(data + 1);
@@ -111,55 +109,13 @@ void transmitRange() {
     timeRangeSent.getTimestamp(data + 11);
     DW1000.setData(data, LEN_DATA);
     DW1000.startTransmit();
-    //Serial.print("Expect RANGE to be sent @ "); Serial.println(timeRangeSent.getAsFloat());
 }
 
 void receiver() {
     DW1000.newReceive();
     DW1000.setDefaults();
-    // so we don't need to restart the receiver manually
     DW1000.receivePermanently(true);
     DW1000.startReceive();
-}
-
-void i2cScan() {
-  Wire.begin(21, 22, 400000);
-  byte error, address;
-  int nDevices;
-
-  Serial.println("Scanning...");
-
-  nDevices = 0;
-  for(address = 1; address < 127; address++ ) 
-  {
-    // The i2c_scanner uses the return value of
-    // the Write.endTransmisstion to see if
-    // a device did acknowledge to the address.
-    Wire.beginTransmission(address);
-    error = Wire.endTransmission();
-
-    if (error == 0)
-    {
-      Serial.print("I2C device found at address 0x");
-      if (address<16) 
-        Serial.print("0");
-      Serial.print(address,HEX);
-      Serial.println("  !");
-
-      nDevices++;
-    }
-    else if (error==4) 
-    {
-      Serial.print("Unknown error at address 0x");
-      if (address<16) 
-        Serial.print("0");
-      Serial.println(address,HEX);
-    }    
-  }
-  if (nDevices == 0)
-    Serial.println("No I2C devices found\n");
-  else
-    Serial.println("done\n");
 }
 
 void setup() {
@@ -170,7 +126,7 @@ void setup() {
 
   strip.Begin();
 
-  strip.SetPixelColor(0, red);
+  strip.SetPixelColor(0, blue);
   strip.Show();
 
   motor.init();
@@ -181,27 +137,24 @@ void setup() {
   if (WiFi.waitForConnectResult() != WL_CONNECTED) {
       Serial.println("WiFi Failed");
       while(1) {
-          delay(1000);
+          delay(500);
       }
   }
-  if(udp.listen(1234)) {
-    udp.onPacket([](AsyncUDPPacket packet) {
-        String myString = (const char*)packet.data();
-        if (myString == "F") {
-          fly = true;
-        } else if (myString == "S") {
-          fly = false;
-          motor.setPwn(0);
-        } else if (myString.substring(0,1) == "M") {
-          motor_dynamic = myString.substring(1).toInt();
-        }
-      });
+
+  bool connected = client.connect(websockets_server_host, websockets_server_port, "/");
+  if(connected) {
+      client.send(String(ID));
+  } else {
+    strip.SetPixelColor(0, red);
+    strip.Show();
   }
-
-  strip.SetPixelColor(0, blue);
-  strip.Show();
-
-  i2cScan();
+  client.onMessage([&](WebsocketsMessage message){
+    String data = message.data();
+      if (data == "GO") {
+        strip.SetPixelColor(0, green);
+        strip.Show();
+      }
+  });
 
   pinMode(battery_pin, INPUT_PULLUP);
 
@@ -241,6 +194,10 @@ void setup() {
 }
 
 void loop() {
+
+  if(client.available()) {
+      client.poll();
+  }
 
   if (!sentAck && !receivedAck) {
       if (millis() - lastActivity > resetPeriod) {
@@ -294,16 +251,9 @@ void loop() {
   }
 
   mpu.update();
-  /*
 
-  Serial.println(mpu.getAngleX());
-  Serial.println(mpu.getAngleY());
-  Serial.println(bmp.readAltitude(1013.25));
-  */
-  // Serial.println(analogRead(battery_pin));
-
-  int x = map(mpu.getAngleX(), 0, 100, 10, 200);
-  int y = map(mpu.getAngleY(), 0, 100, 10, 200);
+  int x = map(mpu.getAngleX(), 0, 100, 0, 250);
+  int y = map(mpu.getAngleY(), 0, 100, 0, 250);
 
   int alti = map(altitude, altitude_forced-50, altitude_forced+50, 0, 200);
 
@@ -329,10 +279,5 @@ void loop() {
       motor.rr(MIN_MOTOR_PWM + motor_dynamic);
     }
   }
-
-
-  // delay(1000);
-
-  // Serial.println(alti);
 }
 
