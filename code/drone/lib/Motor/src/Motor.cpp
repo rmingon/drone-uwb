@@ -65,6 +65,21 @@ void Motor::lr(uint8_t pwm) {
 }
 
 void Motor::test() {
-  
+  lr(50);
+  delay(500);
+  lr(0);
+  delay(0);
+  rr(50);
+  delay(500);
+  rr(0);
+  delay(0);
+  lf(50);
+  delay(500);
+  lf(0);
+  delay(0);
+  rl(50);
+  delay(500);
+  rl(0);
+  delay(0);
 }
 
