@@ -29,8 +29,8 @@ const uint8_t PixelPin = 14;
 NeoPixelBus<NeoGrbFeature, NeoWs2812xMethod> strip(PixelCount, PixelPin);
 
 RgbColor red(128, 0, 0);
-RgbColor blue(0, 128, 0);
-RgbColor green(0, 0, 128);
+RgbColor blue(0, 0, 128);
+RgbColor green(0, 128, 0);
 
 #define MIN_MOTOR_PWM 20
 
@@ -71,6 +71,8 @@ uint32_t resetPeriod = 250;
 uint16_t replyDelayTimeUS = 3000;
 
 uint8_t battery_pin = 13;
+
+void sendUWB();
 
 void noteActivity() {
     lastActivity = millis();
@@ -118,6 +120,30 @@ void receiver() {
     DW1000.startReceive();
 }
 
+
+
+void parseWS(String &data) {
+    if (data == "GO") {
+      strip.SetPixelColor(0, green);
+      strip.Show();
+    } else if (data == "F") {
+      fly = true;
+    } else if (data.substring(0,1) == "M") {
+      motor_dynamic = data.substring(1).toInt();
+    } else if (data.substring(0,1) == "D") { // DIRECTION + ACCELERATION
+      motor_dynamic = data.substring(1).toInt();
+    } else if (data == "S") {
+      fly = false;
+      motor.setPwn(0);
+    } else if (data == "R") {
+      ESP.restart();
+    }
+}
+
+void server(String &msg) {
+  client.send(String(ID) + msg);
+}
+
 void setup() {
   WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);
 
@@ -131,29 +157,30 @@ void setup() {
 
   motor.init();
   motor.setPwn(0);
+  motor.test();
 
   WiFi.mode(WIFI_STA);
   WiFi.begin(SSID, PASS);
   if (WiFi.waitForConnectResult() != WL_CONNECTED) {
-      Serial.println("WiFi Failed");
-      while(1) {
-          delay(500);
-      }
+    Serial.println("WiFi Failed");
+    while(1) {
+      delay(500);
+    }
   }
 
   bool connected = client.connect(websockets_server_host, websockets_server_port, "/");
   if(connected) {
-      client.send(String(ID));
+    client.send("D"+String(ID));
   } else {
     strip.SetPixelColor(0, red);
     strip.Show();
   }
-  client.onMessage([&](WebsocketsMessage message){
+
+
+  client.onMessage([&](WebsocketsMessage message) {
     String data = message.data();
-      if (data == "GO") {
-        strip.SetPixelColor(0, green);
-        strip.Show();
-      }
+    Serial.println(data);
+    parseWS(data);
   });
 
   pinMode(battery_pin, INPUT_PULLUP);
@@ -199,11 +226,49 @@ void loop() {
       client.poll();
   }
 
+  // sendUWB();
+
+  mpu.update();
+
+  int x = map(mpu.getAngleX(), 0, 100, 0, 250);
+  int y = map(mpu.getAngleY(), 0, 100, 0, 250);
+
+  server("X"+String(x));
+  server("Y"+String(y));
+  server("A"+String(bmp.takeForcedMeasurement() * 1000));
+
+  // int alti = map(altitude, altitude_forced-50, altitude_forced+50, 0, 200);
+
+  if (fly) {
+    if (-y+x > 0) {
+      motor.lf(-y+x + MIN_MOTOR_PWM + motor_dynamic);
+    } else {
+      motor.lf(MIN_MOTOR_PWM + motor_dynamic);
+    }
+    if (y+x > 0) {
+      motor.lr(y+x + MIN_MOTOR_PWM + motor_dynamic);
+    } else {
+      motor.lr(MIN_MOTOR_PWM + motor_dynamic);
+    }
+    if (-y+-x > 0) {
+      motor.rl(-y+-x + MIN_MOTOR_PWM + motor_dynamic);
+    } else {
+      motor.rl(MIN_MOTOR_PWM + motor_dynamic);
+    }
+    if (y+-x > 0) {
+      motor.rr(y+-x + MIN_MOTOR_PWM + motor_dynamic);
+    } else {
+      motor.rr(MIN_MOTOR_PWM + motor_dynamic);
+    }
+  }
+}
+
+void sendUWB() {
   if (!sentAck && !receivedAck) {
-      if (millis() - lastActivity > resetPeriod) {
-          resetInactive();
-      }
-      return;
+    if (millis() - lastActivity > resetPeriod) {
+        resetInactive();
+    }
+    return;
   }
   if (sentAck) {
       sentAck = false;
@@ -249,35 +314,4 @@ void loop() {
       altitude_forced = altitude;
     }
   }
-
-  mpu.update();
-
-  int x = map(mpu.getAngleX(), 0, 100, 0, 250);
-  int y = map(mpu.getAngleY(), 0, 100, 0, 250);
-
-  int alti = map(altitude, altitude_forced-50, altitude_forced+50, 0, 200);
-
-  if (fly) {
-    if (-y+x > 0) {
-      motor.lf(-y+x + MIN_MOTOR_PWM + motor_dynamic);
-    } else {
-      motor.lf(MIN_MOTOR_PWM + motor_dynamic);
-    }
-    if (y+x > 0) {
-      motor.lr(y+x + MIN_MOTOR_PWM + motor_dynamic);
-    } else {
-      motor.lr(MIN_MOTOR_PWM + motor_dynamic);
-    }
-    if (-y+-x > 0) {
-      motor.rl(-y+-x + MIN_MOTOR_PWM + motor_dynamic);
-    } else {
-      motor.rl(MIN_MOTOR_PWM + motor_dynamic);
-    }
-    if (y+-x > 0) {
-      motor.rr(y+-x + MIN_MOTOR_PWM + motor_dynamic);
-    } else {
-      motor.rr(MIN_MOTOR_PWM + motor_dynamic);
-    }
-  }
 }
-
