@@ -24,6 +24,10 @@
 
 ![3D VIEW](https://github.com/rmingon/drone-uwb/blob/main/drone/3d_pcb.png?raw=true)
 
+#### 3D DRONE
+
+![3D VIEW](https://github.com/rmingon/drone-uwb/blob/main/drone/drone_3D.png?raw=true)
+
 ## BASE
 
 ##### This base use Arduino code for know distance between EACH drone and himself
