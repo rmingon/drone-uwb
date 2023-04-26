@@ -1,5 +1,7 @@
 import {WebSocket} from "ws";
 
+
+
 export class Drone {
 
   #ws: WebSocket
@@ -8,6 +10,8 @@ export class Drone {
   x: number = 0
   y: number = 0
   altitude: number = 0
+
+  // cmd: Record<string, (...args) => void> = {}
 
   constructor(id: number, ws: WebSocket) {
     this.id = id
@@ -47,6 +51,16 @@ export class Drone {
       this.y = parseInt(data)
     } else if (cmd === "A") {
       this.altitude = parseInt(data)
+    }
+  }
+
+  cmd(cmd: string, params: string) {
+    if (cmd === "STOP") {
+      this.stop()
+    } else if (cmd === "FLY") {
+      this.fly()
+    } else if (cmd === "SPEED") {
+      this.setMotorMinSpeed(parseInt(params))
     }
   }
 }
