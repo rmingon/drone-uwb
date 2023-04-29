@@ -19,6 +19,8 @@ void Motor::init() {
   ledcSetup(3, 5000, 8);
   ledcAttachPin(PIN_LF, 3);
   setPwn(0);
+
+  rl_offset = 0
 }
 
 void Motor::setPwn(uint8_t pwm) {
@@ -49,36 +51,52 @@ void Motor::back(uint8_t pwm) {
 }
 
 void Motor::rl(uint8_t pwm) {
-  ledcWrite(0, pwm);
+  ledcWrite(0, pwm );
 }
 
 void Motor::rr(uint8_t pwm) {
-  ledcWrite(2, pwm);
+  ledcWrite(2, pwm );
 }
 
 void Motor::lf(uint8_t pwm) {
-  ledcWrite(1, pwm);
+  ledcWrite(1, pwm );
 }
 
 void Motor::lr(uint8_t pwm) {
-  ledcWrite(3, pwm);
+  ledcWrite(3, pwm );
+}
+
+void Motor::rlSetOffset(uint8_t pwm) {
+  this->rl_offset = pwm;
+}
+
+void Motor::rrSetOffset(uint8_t pwm) {
+  this->rr_offset = pwm;
+}
+
+void Motor::lfSetOffset(uint8_t pwm) {
+  this->lf_offset = pwm;
+}
+
+void Motor::lrSetOffset(uint8_t pwm) {
+  this->lr_offset = pwm;
 }
 
 void Motor::test() {
-  lr(50);
-  delay(500);
+  lr(10);
+  delay(300);
   lr(0);
   delay(0);
-  rr(50);
-  delay(500);
+  rr(10);
+  delay(300);
   rr(0);
   delay(0);
-  lf(50);
-  delay(500);
+  lf(10);
+  delay(300);
   lf(0);
   delay(0);
-  rl(50);
-  delay(500);
+  rl(10);
+  delay(300);
   rl(0);
   delay(0);
 }

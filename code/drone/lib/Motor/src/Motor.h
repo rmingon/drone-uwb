@@ -4,6 +4,11 @@
 #include <Arduino.h>
 
 class Motor {
+  private:
+    uint8_t rl_offset;
+    uint8_t rr_offset;
+    uint8_t lr_offset;
+    uint8_t lf_offset;
   public:
     Motor();
     void init();
@@ -16,6 +21,10 @@ class Motor {
     void rr(uint8_t);
     void lr(uint8_t);
     void lf(uint8_t);
+    void rlSetOffset(uint8_t);
+    void rrSetOffset(uint8_t);
+    void lrSetOffset(uint8_t);
+    void lfSetOffset(uint8_t);
     void test();
 };
 
