@@ -32,7 +32,7 @@ Thank you to [PCBWay](https://www.pcbway.com/) for sponsoring the PCB production
 
 #### REAL PCB 
 
-![PCBWAY](https://github.com/rmingon/drone-uwb/blob/main/drone/pcbway.png?raw=true)
+![PCBWAY](https://github.com/rmingon/drone-uwb/blob/main/drone/pcbway.jpg?raw=true)
 
 ## BASE
 
