@@ -58,11 +58,22 @@ QueueHandle_t MotorSpeedQueue;
 
 static const char *TAG = "example";
 
-QueueHandle_t queue1;
+static EventGroupHandle_t s_wifi_event_group;
+#define WIFI_CONNECTED_BIT BIT0
+#define WIFI_FAIL_BIT      BIT1
+
+static int s_retry_num = 0;
+
 #define EXAMPLE_ESP_WIFI_SSID      CONFIG_ESP_WIFI_SSID
 #define EXAMPLE_ESP_WIFI_PASS      CONFIG_ESP_WIFI_PASSWORD
 #define EXAMPLE_ESP_MAXIMUM_RETRY  3
 
+#if CONFIG_BROKER_CERTIFICATE_OVERRIDDEN == 1
+static const uint8_t pem_start[]  = "-----BEGIN CERTIFICATE-----\n" CONFIG_BROKER_CERTIFICATE_OVERRIDE "\n-----END CERTIFICATE-----";
+#else
+extern const uint8_t pem_start[]   asm("_binary_mqtt_hivemq_start");
+#endif
+extern const uint8_t pem_end[]   asm("_binary_mqtt_hivemq_end");
 
 static void event_handler(void* arg, esp_event_base_t event_base,int32_t event_id, void* event_data)
 {
@@ -180,25 +191,14 @@ static void pwm_init(void)
 
         ESP_ERROR_CHECK(ledc_channel_config(&motor_channel[i]));
     }
-}
 
-void motor_control(void)
-{
-	while(1) {
-	    uint32_t red_duty = 8191 * color.r / 255;
-	    uint32_t green_duty = 8191 * color.g / 255;
-	    uint32_t blue_duty = 8191 * color.b / 255;
+    struct motor_t motor;
+    motor.l = 0;
+    motor.r = 0;
+    motor.b = 0;
+    motor.t = 0;
 
-	    ESP_ERROR_CHECK(ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, red_duty));
-	    ESP_ERROR_CHECK(ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0));
-
-	    ESP_ERROR_CHECK(ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_1, green_duty));
-	    ESP_ERROR_CHECK(ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_1));
-
-	    ESP_ERROR_CHECK(ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_2, blue_duty));
-	    ESP_ERROR_CHECK(ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_2));
-
-	}
+    xQueueSend(MotorSpeedQueue, &motor, 10);
 
 }
 
@@ -229,6 +229,8 @@ led_strip_handle_t led_init(void)
 
 void app_main(void)
 {
+
+    esp_err_t ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
       ESP_ERROR_CHECK(nvs_flash_erase());
       ret = nvs_flash_init();
@@ -237,6 +239,7 @@ void app_main(void)
 
     ESP_LOGI(TAG, "ESP_WIFI_MODE_STA");
     wifi_init_sta();
+    mqtt_app_start();
 
     MotorSpeedQueue = xQueueCreate(1, sizeof( struct motor_t ));
 
