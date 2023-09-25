@@ -8,13 +8,22 @@
 #include "driver/ledc.h"
 
 typedef struct {
+    uint8_t r;
+    uint8_t g;
+    uint8_t b;
+} color_t;
+
+typedef struct {
     uint8_t l;
     uint8_t r;
     uint8_t b;
     uint8_t t;
 } motor_t;
+
 TaskHandle_t TaskMotorControl;
+
 QueueHandle_t MotorSpeedQueue;
+
 #define LEFT_MOTOR_PIN 32
 #define RIGHT_MOTOR_PIN 27
 #define TOP_MOTOR_PIN 26
@@ -120,7 +129,8 @@ led_strip_handle_t led_init(void)
 
 void app_main(void)
 {
-    led_strip_handle_t led_strip = configure_led();
+    led_strip_handle_t led_strip = led_init();
+    pwm_init();
     bool led_on_off = false;
 
     ESP_LOGI(TAG, "Start blinking LED strip");
