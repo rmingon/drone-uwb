@@ -12,6 +12,10 @@
 // 10MHz resolution, 1 tick = 0.1us (led strip needs a high resolution)
 #define LED_STRIP_RMT_RES_HZ  (10 * 1000 * 1000)
 
+#define MPU6050_ADDR     0x68
+#define MPU6050_AX_ADDR  0x3B
+#define MPU6050_READ_NUM 14
+
 static const char *TAG = "example";
 
 led_strip_handle_t configure_led(void)
