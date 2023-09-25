@@ -227,6 +227,38 @@ led_strip_handle_t led_init(void)
     return led_strip;
 }
 
+void motor_control(void *pvParameters)
+{
+	struct motor_t motor_speed;
+
+	while(1) {
+		if ( MotorSpeedQueue ) {
+			if ( uxQueueMessagesWaiting ( MotorSpeedQueue ) )
+			{
+				if (xQueueReceive ( MotorSpeedQueue , &motor_speed , 10))
+				{
+					int left = 8191 * motor_speed.l / 255;
+					int right = 8191 * motor_speed.r / 255;
+					int bottom = 8191 * motor_speed.b / 255;
+					int top = 8191 * motor_speed.t / 255;
+				    ESP_ERROR_CHECK(ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, left));
+				    ESP_ERROR_CHECK(ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0));
+
+				    ESP_ERROR_CHECK(ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_1, right));
+				    ESP_ERROR_CHECK(ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_1));
+
+				    ESP_ERROR_CHECK(ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_2, top));
+				    ESP_ERROR_CHECK(ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_2));
+
+				    ESP_ERROR_CHECK(ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_3, bottom));
+				    ESP_ERROR_CHECK(ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_3));
+				}
+			}
+		}
+		vTaskDelay(pdMS_TO_TICKS(500));
+	}
+
+}
 void app_main(void)
 {
 
