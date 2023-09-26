@@ -48,5 +48,6 @@ led_strip_handle_t ledInit(void)
 void setLed(Color color)
 {
 	ESP_ERROR_CHECK(led_strip_set_pixel(led_strip, 0, color.r, color.g, color.b));
+	led_strip_refresh(led_strip);
 }
 

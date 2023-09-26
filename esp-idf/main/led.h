@@ -10,6 +10,8 @@
 
 #include "led_strip.h"
 
+extern led_strip_handle_t led_strip;
+
 typedef struct {
     int r;
     int g;
