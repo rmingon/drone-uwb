@@ -16,18 +16,7 @@
 #include "esp_ota_ops.h"
 
 #include <sys/param.h>
-struct color_t {
-    uint8_t r;
-    uint8_t g;
-    uint8_t b;
-};
-
-struct motor_t {
-    int l;
-    int r;
-    int b;
-    int t;
-};
+#include "led.h"
 
 typedef struct
 {
@@ -37,7 +26,6 @@ typedef struct
 } Data_t;
 
 TaskHandle_t TaskMotorControl;
-
 QueueHandle_t MotorSpeedQueue;
 
 #define LEFT_MOTOR_PIN 32
@@ -67,13 +55,6 @@ static int s_retry_num = 0;
 #define EXAMPLE_ESP_WIFI_SSID      CONFIG_ESP_WIFI_SSID
 #define EXAMPLE_ESP_WIFI_PASS      CONFIG_ESP_WIFI_PASSWORD
 #define EXAMPLE_ESP_MAXIMUM_RETRY  3
-
-#if CONFIG_BROKER_CERTIFICATE_OVERRIDDEN == 1
-static const uint8_t pem_start[]  = "-----BEGIN CERTIFICATE-----\n" CONFIG_BROKER_CERTIFICATE_OVERRIDE "\n-----END CERTIFICATE-----";
-#else
-extern const uint8_t pem_start[]   asm("_binary_mqtt_hivemq_start");
-#endif
-extern const uint8_t pem_end[]   asm("_binary_mqtt_hivemq_end");
 
 static void event_handler(void* arg, esp_event_base_t event_base,int32_t event_id, void* event_data)
 {
@@ -155,183 +136,6 @@ void wifi_init_sta(void)
     }
 }
 
-ledc_timer_config_t motor_timer = {
-    .speed_mode = LEDC_LOW_SPEED_MODE,
-    .timer_num  = LEDC_TIMER_0,
-    .duty_resolution = LEDC_TIMER_13_BIT,
-    .freq_hz = 1000,
-    .clk_cfg = LEDC_AUTO_CLK
-};
-
-ledc_channel_config_t motor_channel[4];
-
-static void pwm_init(void)
-{
-    ESP_ERROR_CHECK(ledc_timer_config(&motor_timer));
-
-    motor_channel[0].channel = LEDC_CHANNEL_0;
-    motor_channel[0].gpio_num = LEFT_MOTOR_PIN;
-
-    motor_channel[1].channel = LEDC_CHANNEL_1;
-    motor_channel[1].gpio_num = RIGHT_MOTOR_PIN;
-
-    motor_channel[2].channel = LEDC_CHANNEL_2;
-    motor_channel[2].gpio_num = TOP_MOTOR_PIN;
-
-    motor_channel[3].channel = LEDC_CHANNEL_3;
-    motor_channel[3].gpio_num = BOTTOM_MOTOR_PIN;
-
-    for (int i = 0; i < 4; i++)
-    {
-    	motor_channel[i].speed_mode = LEDC_LOW_SPEED_MODE;
-    	motor_channel[i].timer_sel = LEDC_TIMER_0;
-    	motor_channel[i].intr_type = LEDC_INTR_DISABLE;
-    	motor_channel[i].duty = 0;
-    	motor_channel[i].hpoint = 0;
-
-        ESP_ERROR_CHECK(ledc_channel_config(&motor_channel[i]));
-    }
-
-    struct motor_t motor;
-    motor.l = 0;
-    motor.r = 0;
-    motor.b = 0;
-    motor.t = 0;
-
-    xQueueSend(MotorSpeedQueue, &motor, 10);
-
-}
-
-led_strip_handle_t led_init(void)
-{
-    // LED strip general initialization, according to your led board design
-    led_strip_config_t strip_config = {
-        .strip_gpio_num = LED_STRIP_BLINK_GPIO,   // The GPIO that connected to the LED strip's data line
-        .max_leds = LED_STRIP_LED_NUMBERS,        // The number of LEDs in the strip,
-        .led_pixel_format = LED_PIXEL_FORMAT_GRB, // Pixel format of your LED strip
-        .led_model = LED_MODEL_WS2812,            // LED strip model
-        .flags.invert_out = false,                // whether to invert the output signal
-    };
-
-    // LED strip backend configuration: RMT
-    led_strip_rmt_config_t rmt_config = {
-        .clk_src = RMT_CLK_SRC_DEFAULT,        // different clock source can lead to different power consumption
-        .resolution_hz = LED_STRIP_RMT_RES_HZ, // RMT counter clock frequency
-        .flags.with_dma = false,               // DMA feature is available on ESP target like ESP32-S3
-    };
-
-    // LED Strip object handle
-    led_strip_handle_t led_strip;
-    ESP_ERROR_CHECK(led_strip_new_rmt_device(&strip_config, &rmt_config, &led_strip));
-    ESP_LOGI(TAG, "Created LED strip object with RMT backend");
-    return led_strip;
-}
-
-void motor_control(void *pvParameters)
-{
-	struct motor_t motor_speed;
-
-	while(1) {
-		if ( MotorSpeedQueue ) {
-			if ( uxQueueMessagesWaiting ( MotorSpeedQueue ) )
-			{
-				if (xQueueReceive ( MotorSpeedQueue , &motor_speed , 10))
-				{
-					int left = 8191 * motor_speed.l / 255;
-					int right = 8191 * motor_speed.r / 255;
-					int bottom = 8191 * motor_speed.b / 255;
-					int top = 8191 * motor_speed.t / 255;
-				    ESP_ERROR_CHECK(ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, left));
-				    ESP_ERROR_CHECK(ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0));
-
-				    ESP_ERROR_CHECK(ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_1, right));
-				    ESP_ERROR_CHECK(ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_1));
-
-				    ESP_ERROR_CHECK(ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_2, top));
-				    ESP_ERROR_CHECK(ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_2));
-
-				    ESP_ERROR_CHECK(ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_3, bottom));
-				    ESP_ERROR_CHECK(ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_3));
-				}
-			}
-		}
-		vTaskDelay(pdMS_TO_TICKS(500));
-	}
-
-}
-
-static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t event_id, void *event_data)
-{
-    ESP_LOGD(TAG, "Event dispatched from event loop base=%s, event_id=%" PRIi32, base, event_id);
-    esp_mqtt_event_handle_t event = event_data;
-    esp_mqtt_client_handle_t client = event->client;
-    int msg_id;
-    switch ((esp_mqtt_event_id_t)event_id) {
-    case MQTT_EVENT_CONNECTED:
-        ESP_LOGI(TAG, "MQTT_EVENT_CONNECTED");
-        msg_id = esp_mqtt_client_subscribe(client, "/topic/qos0", 0);
-        ESP_LOGI(TAG, "sent subscribe successful, msg_id=%d", msg_id);
-
-        msg_id = esp_mqtt_client_subscribe(client, "/topic/qos1", 1);
-        ESP_LOGI(TAG, "sent subscribe successful, msg_id=%d", msg_id);
-
-        msg_id = esp_mqtt_client_unsubscribe(client, "/topic/qos1");
-        ESP_LOGI(TAG, "sent unsubscribe successful, msg_id=%d", msg_id);
-        break;
-    case MQTT_EVENT_DISCONNECTED:
-        ESP_LOGI(TAG, "MQTT_EVENT_DISCONNECTED");
-        break;
-
-    case MQTT_EVENT_SUBSCRIBED:
-        ESP_LOGI(TAG, "MQTT_EVENT_SUBSCRIBED, msg_id=%d", event->msg_id);
-        msg_id = esp_mqtt_client_publish(client, "/topic/qos0", "data", 0, 0, 0);
-        ESP_LOGI(TAG, "sent publish successful, msg_id=%d", msg_id);
-        break;
-    case MQTT_EVENT_UNSUBSCRIBED:
-        ESP_LOGI(TAG, "MQTT_EVENT_UNSUBSCRIBED, msg_id=%d", event->msg_id);
-        break;
-    case MQTT_EVENT_PUBLISHED:
-        ESP_LOGI(TAG, "MQTT_EVENT_PUBLISHED, msg_id=%d", event->msg_id);
-        break;
-    case MQTT_EVENT_DATA:
-        ESP_LOGI(TAG, "MQTT_EVENT_DATA");
-        printf("TOPIC=%.*s\r\n", event->topic_len, event->topic);
-        printf("DATA=%.*s\r\n", event->data_len, event->data);
-        break;
-    case MQTT_EVENT_ERROR:
-        ESP_LOGI(TAG, "MQTT_EVENT_ERROR");
-        if (event->error_handle->error_type == MQTT_ERROR_TYPE_TCP_TRANSPORT) {
-            ESP_LOGI(TAG, "Last error code reported from esp-tls: 0x%x", event->error_handle->esp_tls_last_esp_err);
-            ESP_LOGI(TAG, "Last tls stack error number: 0x%x", event->error_handle->esp_tls_stack_err);
-            ESP_LOGI(TAG, "Last captured errno : %d (%s)",  event->error_handle->esp_transport_sock_errno,
-                     strerror(event->error_handle->esp_transport_sock_errno));
-        } else if (event->error_handle->error_type == MQTT_ERROR_TYPE_CONNECTION_REFUSED) {
-            ESP_LOGI(TAG, "Connection refused error: 0x%x", event->error_handle->connect_return_code);
-        } else {
-            ESP_LOGW(TAG, "Unknown error type: 0x%x", event->error_handle->error_type);
-        }
-        break;
-    default:
-        ESP_LOGI(TAG, "Other event id:%d", event->event_id);
-        break;
-    }
-}
-
-static void mqtt_app_start(void)
-{
-    const esp_mqtt_client_config_t mqtt_cfg = {
-        .broker = {
-            .address.uri = "0a376325c3d7465782be88f4f57cfa7d.s2.eu.hivemq.cloud",
-            .verification.certificate = (const char *)pem_start
-        },
-    };
-
-    ESP_LOGI(TAG, "[APP] Free memory: %" PRIu32 " bytes", esp_get_free_heap_size());
-    esp_mqtt_client_handle_t client = esp_mqtt_client_init(&mqtt_cfg);
-    /* The last argument may be used to pass data to the event handler, in this example mqtt_event_handler */
-    esp_mqtt_client_register_event(client, ESP_EVENT_ANY_ID, mqtt_event_handler, NULL);
-    esp_mqtt_client_start(client);
-}
 
 
 void app_main(void)
@@ -348,11 +152,12 @@ void app_main(void)
     wifi_init_sta();
     mqtt_app_start();
 
-    MotorSpeedQueue = xQueueCreate(1, sizeof( struct motor_t ));
+    MotorSpeedQueue = xQueueCreate(1, sizeof( MotorsSpeed ));
 
-    led_strip_handle_t led_strip = led_init();
-    pwm_init();
-    xTaskCreate(motor_control, "TaskMotorControl", 5000, NULL, 1, &TaskMotorControl);
+    led_strip = ledInit();
+
+    motorInit();
+    xTaskCreate(motorControl, "TaskMotorControl", 5000, NULL, 1, &TaskMotorControl);
 
 /*
     while (1) {
