@@ -1,11 +1,9 @@
 #include <stdio.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "led_strip.h"
 #include "esp_log.h"
 #include "esp_err.h"
 #include "freertos/queue.h"
-#include "driver/ledc.h"
 #include "freertos/event_groups.h"
 #include "esp_system.h"
 #include "esp_wifi.h"
@@ -14,7 +12,7 @@
 #include "mqtt_client.h"
 #include "esp_tls.h"
 #include "esp_ota_ops.h"
-
+#include "motor.h"
 #include <sys/param.h>
 #include "led.h"
 
@@ -27,18 +25,6 @@ typedef struct
 
 TaskHandle_t TaskMotorControl;
 QueueHandle_t MotorSpeedQueue;
-
-#define LEFT_MOTOR_PIN 32
-#define RIGHT_MOTOR_PIN 27
-#define TOP_MOTOR_PIN 26
-#define BOTTOM_MOTOR_PIN 25
-
-// GPIO assignment
-#define LED_STRIP_BLINK_GPIO  14
-// Numbers of the LED in the strip
-#define LED_STRIP_LED_NUMBERS 1
-// 10MHz resolution, 1 tick = 0.1us (led strip needs a high resolution)
-#define LED_STRIP_RMT_RES_HZ  (10 * 1000 * 1000)
 
 #define MPU6050_ADDR     0x68
 #define MPU6050_AX_ADDR  0x3B
@@ -150,7 +136,6 @@ void app_main(void)
 
     ESP_LOGI(TAG, "ESP_WIFI_MODE_STA");
     wifi_init_sta();
-    mqtt_app_start();
 
     MotorSpeedQueue = xQueueCreate(1, sizeof( MotorsSpeed ));
 
