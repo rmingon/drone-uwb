@@ -140,7 +140,11 @@ void app_main(void)
     MotorSpeedQueue = xQueueCreate(1, sizeof( MotorsSpeed ));
 
     led_strip = ledInit();
-
+    Color color_initial;
+    color_initial.b = 255;
+    color_initial.r = 0;
+    color_initial.g = 0;
+    setLed(color_initial);
     motorInit();
     xTaskCreate(motorControl, "TaskMotorControl", 5000, NULL, 1, &TaskMotorControl);
 

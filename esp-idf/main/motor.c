@@ -9,6 +9,8 @@
 #include "driver/ledc.h"
 #include "freertos/queue.h"
 #include "motor.h"
+#include "esp_log.h"
+#include "esp_err.h"
 
 extern QueueHandle_t MotorSpeedQueue;
 
