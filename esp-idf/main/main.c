@@ -15,6 +15,7 @@
 #include "motor.h"
 #include <sys/param.h>
 #include "led.h"
+#include "i2c.h"
 
 typedef struct
 {
@@ -22,6 +23,8 @@ typedef struct
   float gx; float gy; float gz;
   float tp;
 } Data_t;
+
+extern void i2cMasterInit();
 
 TaskHandle_t TaskMotorControl;
 QueueHandle_t MotorSpeedQueue;
@@ -146,6 +149,9 @@ void app_main(void)
     color_initial.g = 0;
     setLed(color_initial);
     motorInit();
+
+    i2cInit();
+
     xTaskCreate(motorControl, "TaskMotorControl", 5000, NULL, 1, &TaskMotorControl);
 
 /*

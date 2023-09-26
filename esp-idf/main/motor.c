@@ -14,7 +14,6 @@
 
 extern QueueHandle_t MotorSpeedQueue;
 
-
 #define LEFT_MOTOR_PIN 32
 #define RIGHT_MOTOR_PIN 27
 #define TOP_MOTOR_PIN 26
