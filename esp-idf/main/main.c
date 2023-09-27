@@ -16,6 +16,7 @@
 #include <sys/param.h>
 #include "led.h"
 #include "i2c.h"
+#include "mpu_6050.h"
 
 typedef struct
 {
@@ -151,28 +152,20 @@ void app_main(void)
     motorInit();
 
     i2cInit();
+    i2cWrite(0x68, 0x6B, 0x0);
 
     xTaskCreate(motorControl, "TaskMotorControl", 5000, NULL, 1, &TaskMotorControl);
 
-/*
     while (1) {
 
-    bool led_on_off = false;
+    	ACC acc;
+    	getRawAcc(&acc);
+    	ESP_LOGI(TAG, "X %d", acc.x);
+    	ESP_LOGI(TAG, "Y %d", acc.y);
+    	ESP_LOGI(TAG, "Z %d", acc.z);
 
 
-        if (led_on_off) {
-            for (int i = 0; i < LED_STRIP_LED_NUMBERS; i++) {
-                ESP_ERROR_CHECK(led_strip_set_pixel(led_strip, i, 50, 5, 5));
-            }
-            ESP_ERROR_CHECK(led_strip_refresh(led_strip));
-            ESP_LOGI(TAG, "LED ON!");
-        } else {
-            ESP_ERROR_CHECK(led_strip_clear(led_strip));
-            ESP_LOGI(TAG, "LED OFF!");
-        }
-
-        led_on_off = !led_on_off;
         vTaskDelay(pdMS_TO_TICKS(500));
     }
-    */
+
 }
