@@ -9,21 +9,28 @@
 #define MAIN_MPU_6050_H_
 
 typedef struct {
-	int16_t x;
-	int16_t y;
-	int16_t z;
+	float x;
+	float y;
+	float z;
 } ACC;
 
 typedef struct {
-	int16_t x;
-	int16_t y;
-	int16_t z;
-} GIRO;
+	float x;
+	float y;
+	float z;
+} GYRO;
 
+void initMPU6050();
 
 void getRawAcc(ACC *acc);
 
-void getRawGyro(GIRO *giro);
+void getRawGyro(GYRO *giro);
+
+int16_t getTemp();
+
+void accTask(void *pvParameters);
+
+void gyroTask(void *pvParameters);
 
 
 #endif /* MAIN_MPU_6050_H_ */

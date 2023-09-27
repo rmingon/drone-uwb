@@ -29,6 +29,8 @@ extern void i2cMasterInit();
 
 TaskHandle_t TaskMotorControl;
 QueueHandle_t MotorSpeedQueue;
+QueueHandle_t GyroQueue;
+QueueHandle_t AccQueue;
 
 #define MPU6050_ADDR     0x68
 #define MPU6050_AX_ADDR  0x3B
@@ -126,8 +128,6 @@ void wifi_init_sta(void)
     }
 }
 
-
-
 void app_main(void)
 {
 
@@ -143,29 +143,24 @@ void app_main(void)
 
     MotorSpeedQueue = xQueueCreate(1, sizeof( MotorsSpeed ));
 
+    GyroQueue = xQueueCreate(1, sizeof( GYRO ));
+
+    AccQueue = xQueueCreate(1, sizeof( ACC ));
+
     led_strip = ledInit();
     Color color_initial;
     color_initial.b = 255;
     color_initial.r = 0;
     color_initial.g = 0;
     setLed(color_initial);
+
     motorInit();
 
     i2cInit();
-    i2cWrite(0x68, 0x6B, 0x0);
+    initMPU6050();
 
     xTaskCreate(motorControl, "TaskMotorControl", 5000, NULL, 1, &TaskMotorControl);
-
-    while (1) {
-
-    	ACC acc;
-    	getRawAcc(&acc);
-    	ESP_LOGI(TAG, "X %d", acc.x);
-    	ESP_LOGI(TAG, "Y %d", acc.y);
-    	ESP_LOGI(TAG, "Z %d", acc.z);
-
-
-        vTaskDelay(pdMS_TO_TICKS(500));
-    }
+    xTaskCreate(gyroTask, "TaskGyro", 2048, NULL, 1, NULL);
+    xTaskCreate(accTask, "TaskAcc", 2048, NULL, 1, NULL);
 
 }
