@@ -10,7 +10,20 @@ Thank you to [PCBWay](https://www.pcbway.com/) for sponsoring the PCB production
 
 ### This project exist for make automatic positioning and flying with UWB (ultra wide band) technology
 
-## DRONE
+## DRONE NEW
+#### 3D VIEW
+
+![3D VIEW](new_drone/3d.png)
+
+#### SCHEMATIC VIEW
+
+![SCHEMATIC VIEW](new_drone/schematic.png)
+
+#### PCB VIEW
+
+![PCB VIEW](new_drone/pcb.png)
+
+## DRONE OLD
 
 ##### This drone use Arduino code for fly and have is proper esc for little motors
 
