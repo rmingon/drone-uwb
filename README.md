@@ -13,15 +13,15 @@ Thank you to [PCBWay](https://www.pcbway.com/) for sponsoring the PCB production
 ## DRONE NEW
 #### 3D VIEW
 
-![3D VIEW](new_drone/3d.png)
+![3D VIEW](new_drone/3d.PNG)
 
 #### SCHEMATIC VIEW
 
-![SCHEMATIC VIEW](new_drone/schematic.png)
+![SCHEMATIC VIEW](new_drone/schematic.PNG)
 
 #### PCB VIEW
 
-![PCB VIEW](new_drone/pcb.png)
+![PCB VIEW](new_drone/pcb.PNG)
 
 ## DRONE OLD
 
