@@ -29,23 +29,23 @@ Thank you to [PCBWay](https://www.pcbway.com/) for sponsoring the PCB production
 
 #### SCHEMATIC VIEW
 
-![SCHEMATIC VIEW](https://github.com/rmingon/drone-uwb/blob/main/drone/schematic_pcb.png?raw=true)
+![SCHEMATIC VIEW](drone/schematic_pcb.png?raw=true)
 
 #### PCB VIEW
 
-![PCB VIEW](https://github.com/rmingon/drone-uwb/blob/main/drone/pcb.png?raw=true)
+![PCB VIEW](drone/pcb.png?raw=true)
 
 #### 3D VIEW
 
-![3D VIEW](https://github.com/rmingon/drone-uwb/blob/main/drone/3d_pcb.png?raw=true)
+![3D VIEW](drone/3d_pcb.png?raw=true)
 
 #### 3D DRONE
 
-![3D VIEW](https://github.com/rmingon/drone-uwb/blob/main/drone/drone_3D.png?raw=true)
+![3D VIEW](drone/drone_3D.png?raw=true)
 
 #### REAL PCB 
 
-![PCBWAY](https://github.com/rmingon/drone-uwb/blob/main/drone/pcbway.jpg?raw=true)
+![PCBWAY](drone/pcbway.jpg?raw=true)
 
 ## BASE
 
@@ -53,14 +53,14 @@ Thank you to [PCBWay](https://www.pcbway.com/) for sponsoring the PCB production
 
 #### SCHEMATIC VIEW
 
-![SCHEMATIC VIEW](https://github.com/rmingon/drone-uwb/blob/main/base/schematic_pcb.png?raw=true)
+![SCHEMATIC VIEW](base/base_with_battery/schematic_pcb.png?raw=true)
 
 #### PCB VIEW
 
-![PCB VIEW](https://github.com/rmingon/drone-uwb/blob/main/base/pcb.png?raw=true)
+![PCB VIEW](base/base_with_battery/pcb.png?raw=true)
 
 #### 3D VIEW
 
-![3D VIEW](https://github.com/rmingon/drone-uwb/blob/main/base/3d_pcb.png?raw=true)
+![3D VIEW](base/base_with_battery/3d_pcb.png?raw=true)
 
 Thank you to [PCBWay](https://www.pcbway.com/) for sponsoring this project by covering the cost of PCB production for beta. The boards turned out very nicely. The green solder mask looks solid and the grills holes is perfect.
