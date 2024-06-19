@@ -84,7 +84,7 @@
       (mirror false)
       (drillshape 0)
       (scaleselection 1)
-      (outputdirectory "/home/roro/Documents/drone-uwd/drone/plot/")
+      (outputdirectory "plot/")
     )
   )
 
