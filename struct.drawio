@@ -1,0 +1,61 @@
+<mxfile host="app.diagrams.net" modified="2024-06-21T12:47:41.160Z" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36" etag="vpiVcg0zIBBWZoaNGS2Y" version="24.6.0" type="device">
+  <diagram name="Page-1" id="eNJvu5PRMBXn2aZO4QGK">
+    <mxGraphModel dx="1674" dy="1098" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="QoL85uCQuuXbSvfMQcG--1" value="BASE&lt;div&gt;UWB &amp;amp; WIFI&lt;/div&gt;" style="verticalLabelPosition=bottom;verticalAlign=top;html=1;shape=mxgraph.basic.cone" vertex="1" parent="1">
+          <mxGeometry x="100" y="150" width="100" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="QoL85uCQuuXbSvfMQcG--2" value="BASE&lt;div&gt;UWB &amp;amp; WIFI&lt;/div&gt;" style="verticalLabelPosition=bottom;verticalAlign=top;html=1;shape=mxgraph.basic.cone" vertex="1" parent="1">
+          <mxGeometry x="520" y="220" width="100" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="QoL85uCQuuXbSvfMQcG--3" value="BASE&lt;div&gt;UWB &amp;amp; WIFI&lt;/div&gt;" style="verticalLabelPosition=bottom;verticalAlign=top;html=1;shape=mxgraph.basic.cone" vertex="1" parent="1">
+          <mxGeometry x="90" y="420" width="100" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="QoL85uCQuuXbSvfMQcG--4" value="" style="shape=mxgraph.arrows2.wedgeArrowDashed2;html=1;bendable=0;startWidth=50;stepSize=15;rounded=0;entryX=0.027;entryY=0.973;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" target="QoL85uCQuuXbSvfMQcG--2">
+          <mxGeometry width="100" height="100" relative="1" as="geometry">
+            <mxPoint x="340" y="380" as="sourcePoint" />
+            <mxPoint x="500" y="320" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="QoL85uCQuuXbSvfMQcG--5" value="" style="shape=mxgraph.arrows2.wedgeArrowDashed2;html=1;bendable=0;startWidth=50;stepSize=15;rounded=0;entryX=0.787;entryY=1;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" target="QoL85uCQuuXbSvfMQcG--1">
+          <mxGeometry width="100" height="100" relative="1" as="geometry">
+            <mxPoint x="270" y="360" as="sourcePoint" />
+            <mxPoint x="200" y="240" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="QoL85uCQuuXbSvfMQcG--6" value="" style="shape=mxgraph.arrows2.wedgeArrowDashed2;html=1;bendable=0;startWidth=50;stepSize=15;rounded=0;entryX=0.9;entryY=0.667;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" target="QoL85uCQuuXbSvfMQcG--3">
+          <mxGeometry width="100" height="100" relative="1" as="geometry">
+            <mxPoint x="260" y="440" as="sourcePoint" />
+            <mxPoint x="210" y="250" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="QoL85uCQuuXbSvfMQcG--7" value="DRONE&lt;div&gt;UWB &amp;amp; WIFI&lt;/div&gt;" style="verticalLabelPosition=bottom;verticalAlign=top;html=1;shape=mxgraph.basic.6_point_star" vertex="1" parent="1">
+          <mxGeometry x="270" y="360" width="60" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="QoL85uCQuuXbSvfMQcG--8" value="&lt;div&gt;WIFI&lt;/div&gt;ACCESS&lt;div&gt;POINT&lt;/div&gt;" style="verticalLabelPosition=middle;verticalAlign=middle;html=1;shape=trapezoid;perimeter=trapezoidPerimeter;whiteSpace=wrap;size=0.23;arcSize=10;flipV=1;labelPosition=center;align=center;" vertex="1" parent="1">
+          <mxGeometry x="315" y="590" width="100" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="QoL85uCQuuXbSvfMQcG--10" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=1;entryDx=0;entryDy=0;startArrow=classicThin;startFill=1;" edge="1" parent="1" source="QoL85uCQuuXbSvfMQcG--9" target="QoL85uCQuuXbSvfMQcG--8">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="QoL85uCQuuXbSvfMQcG--9" value="SERVER" style="verticalLabelPosition=bottom;verticalAlign=top;html=1;shape=mxgraph.basic.rect;fillColor2=none;strokeWidth=1;size=20;indent=5;" vertex="1" parent="1">
+          <mxGeometry x="150" y="710" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="QoL85uCQuuXbSvfMQcG--11" value="" style="shape=actor;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="395" y="850" width="40" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="QoL85uCQuuXbSvfMQcG--15" value="UWB" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="210" y="478" width="50" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="QoL85uCQuuXbSvfMQcG--16" value="UWB" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="420" y="370" width="50" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="QoL85uCQuuXbSvfMQcG--17" value="UWB" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="170" y="320" width="50" height="30" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

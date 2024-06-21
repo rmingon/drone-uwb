@@ -10,6 +10,10 @@ Thank you to [PCBWay](https://www.pcbway.com/) for sponsoring the PCB production
 
 ### This project exist for make automatic positioning and flying with UWB (ultra wide band) technology
 
+### Architecture
+
+![3D VIEW](struct.png)
+
 ## DRONE NEW
 #### 3D VIEW
 
