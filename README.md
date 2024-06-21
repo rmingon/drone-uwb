@@ -51,20 +51,4 @@ Thank you to [PCBWay](https://www.pcbway.com/) for sponsoring the PCB production
 
 ![PCBWAY](drone/pcbway.jpg?raw=true)
 
-## BASE
-
-##### This base use Arduino code for know distance between EACH drone and himself
-
-#### SCHEMATIC VIEW
-
-![SCHEMATIC VIEW](base/base_with_battery/schematic_pcb.png?raw=true)
-
-#### PCB VIEW
-
-![PCB VIEW](base/base_with_battery/pcb.png?raw=true)
-
-#### 3D VIEW
-
-![3D VIEW](base/base_with_battery/3d_pcb.png?raw=true)
-
 Thank you to [PCBWay](https://www.pcbway.com/) for sponsoring this project by covering the cost of PCB production for beta. The boards turned out very nicely. The green solder mask looks solid and the grills holes is perfect.
