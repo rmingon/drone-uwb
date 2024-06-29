@@ -14,20 +14,23 @@ Thank you to [PCBWay](https://www.pcbway.com/) for sponsoring the PCB production
 
 ![3D VIEW](struct.png)
 
-## DRONE NEW
-#### 3D VIEW
+## DRONE WITH ESC 30A
 
-![3D VIEW](new_drone/3d.PNG)
+##### This drone use Arduino code for fly and have is proper esc for little motors
 
 #### SCHEMATIC VIEW
 
-![SCHEMATIC VIEW](new_drone/schematic.PNG)
+![SCHEMATIC VIEW](drone_with_esc/schematic.png?raw=true)
 
 #### PCB VIEW
 
-![PCB VIEW](new_drone/pcb.PNG)
+![PCB VIEW](drone_with_esc/pcb.png?raw=true)
 
-## DRONE OLD
+#### 3D VIEW
+
+![3D VIEW](drone_with_esc/3d.png?raw=true)
+
+## DRONE WITHOUT ESC
 
 ##### This drone use Arduino code for fly and have is proper esc for little motors
 
