@@ -4,7 +4,6 @@
 #include <MPU6050_light.h>
 #include <Motor.h>
 #include <Adafruit_BMP280.h>
-#include <Conf.h>
 #include "soc/soc.h"
 #include "soc/rtc_cntl_reg.h"
 #include "DW1000.h"
@@ -120,8 +119,6 @@ void receiver() {
     DW1000.startReceive();
 }
 
-
-
 void parseWS(String &data) {
     if (data == "GO") {
       strip.SetPixelColor(0, green);
@@ -147,8 +144,8 @@ void server(String &msg) {
 void setup() {
   WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);
 
-  Serial.begin(460800);
-  Wire.begin(21, 22, 400000);
+  Serial.begin(115200);
+  Wire.begin(21, 22, 600000);
 
   strip.Begin();
 
@@ -159,29 +156,7 @@ void setup() {
   motor.setPwn(0);
   motor.test();
 
-  WiFi.mode(WIFI_STA);
-  WiFi.begin(SSID, PASS);
-  if (WiFi.waitForConnectResult() != WL_CONNECTED) {
-    Serial.println("WiFi Failed");
-    while(1) {
-      delay(500);
-    }
-  }
 
-  bool connected = client.connect(websockets_server_host, websockets_server_port, "/");
-  if(connected) {
-    client.send("D"+String(ID));
-  } else {
-    strip.SetPixelColor(0, red);
-    strip.Show();
-  }
-
-
-  client.onMessage([&](WebsocketsMessage message) {
-    String data = message.data();
-    Serial.println(data);
-    parseWS(data);
-  });
 
   pinMode(battery_pin, INPUT_PULLUP);
 
@@ -194,8 +169,7 @@ void setup() {
                   Adafruit_BMP280::SAMPLING_X1,     /* Temp. oversampling */
                   Adafruit_BMP280::SAMPLING_X16,    /* Pressure oversampling */
                   Adafruit_BMP280::FILTER_X16,      /* Filtering. */
-                  Adafruit_BMP280::STANDBY_MS_1); /* Standby time. */
-
+                  Adafruit_BMP280::STANDBY_MS_1);   /* Standby time. */
 
   DW1000.begin(16, 33);
   DW1000.select(5);
@@ -218,6 +192,30 @@ void setup() {
 
   strip.SetPixelColor(0, green);
   strip.Show();
+
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(SSID, PASS);
+  if (WiFi.waitForConnectResult() != WL_CONNECTED) {
+    Serial.println("WiFi Failed");
+    while(1) {
+      delay(500);
+    }
+  }
+
+  bool connected = client.connect(websockets_server_host, websockets_server_port, "/");
+  if(connected) {
+    client.send("D"+String(ID));
+  } else {
+    strip.SetPixelColor(0, red);
+    strip.Show();
+  }
+
+  client.onMessage([&](WebsocketsMessage message) {
+    String data = message.data();
+    Serial.println(data);
+    parseWS(data);
+  });
+
 }
 
 void loop() {

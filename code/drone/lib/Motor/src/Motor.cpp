@@ -19,8 +19,6 @@ void Motor::init() {
   ledcSetup(3, 5000, 8);
   ledcAttachPin(PIN_LF, 3);
   setPwn(0);
-
-  rl_offset = 0
 }
 
 void Motor::setPwn(uint8_t pwm) {
