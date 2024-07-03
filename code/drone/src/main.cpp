@@ -181,14 +181,25 @@ void setup() {
   DW1000.commitConfiguration();
   char msg[128];
   DW1000.getPrintableDeviceIdentifier(msg);
+  Serial.print("Device ID: "); Serial.println(msg);
   DW1000.getPrintableExtendedUniqueIdentifier(msg);
+  Serial.print("Unique ID: "); Serial.println(msg);
   DW1000.getPrintableNetworkIdAndShortAddress(msg);
+  Serial.print("Network ID & Device Address: "); Serial.println(msg);
   DW1000.getPrintableDeviceMode(msg);
+  Serial.print("Device mode: "); Serial.println(msg);
   DW1000.attachSentHandler(handleSent);
   DW1000.attachReceivedHandler(handleReceived);
   receiver();
   transmitPoll();
   noteActivity();
+
+  Serial.println(mpu.getAngleX());
+  Serial.println(mpu.getAngleY());
+  if (bmp.takeForcedMeasurement()) {
+    altitude = bmp.readAltitude(1013.25);
+    Serial.println(altitude);
+  }
 
   strip.SetPixelColor(0, green);
   strip.Show();
