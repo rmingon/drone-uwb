@@ -18,6 +18,12 @@ Thank you to [PCBWay](https://www.pcbway.com/) for sponsoring the PCB production
 
 ##### This drone use Arduino code for fly and have is proper esc for little motors
 
+### REAL
+
+![VIEW TOP](drone_with_esc/real_top.jpg?raw=true)
+
+![VIEW BOTTOM](drone_with_esc/real_bottom.jpg?raw=true)
+
 #### SCHEMATIC VIEW
 
 ![SCHEMATIC VIEW](drone_with_esc/schematic.png?raw=true)
