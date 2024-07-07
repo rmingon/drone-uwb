@@ -1,9 +1,11 @@
 #include <Arduino.h>
 #include <LiteLED.h>
 #include <SPI.h>
+
 #include <DW1000Ng.hpp>
 #include <DW1000NgUtils.hpp>
 #include <DW1000NgRanging.hpp>
+#include <DW1000NgRTLS.hpp>
 
 uint64_t timePollSent;
 uint64_t timePollReceived;
@@ -11,7 +13,14 @@ uint64_t timePollAckSent;
 uint64_t timePollAckReceived;
 uint64_t timeRangeSent;
 uint64_t timeRangeReceived;
-volatile boolean receivedAck = false;
+
+volatile boolean received = false;
+volatile boolean error = false;
+volatile int16_t numReceived = 0; // todo check int type
+String message;
+
+int16_t sentNum = 0; // todo check int type
+
 #define LEN_DATA 16
 byte data[LEN_DATA];
 
@@ -48,67 +57,91 @@ device_configuration_t DEFAULT_CONFIG = {
     PreambleLength::LEN_256,
     PreambleCode::CODE_3
 };
+
+frame_filtering_configuration_t ANCHOR_FRAME_FILTER_CONFIG = {
+    false,
+    false,
+    true,
+    false,
+    false,
+    false,
+    false,
+    true /* This allows blink frames */
+};
+
+
 void handleReceived() {
-    // status change on received success
-    receivedAck = true;
+  // status change on reception success
+  received = true;
+}
+
+void handleError() {
+  error = true;
 }
 
 void setup() {
-    Serial.begin(9600);
+  Serial.begin(9600);
   Serial.println(F("### DW1000Ng-arduino-receiver-test ###"));
   // initialize the driver
-  DW1000Ng::initialize(5, 35, 14);
-  Serial.println(F("DW1000Ng initialized ..."));
+    DW1000Ng::initializeNoInterrupt(5, 14);
+    Serial.println(F("DW1000Ng initialized ..."));
+    // general configuration
+    DW1000Ng::applyConfiguration(DEFAULT_CONFIG);
+    DW1000Ng::enableFrameFiltering(ANCHOR_FRAME_FILTER_CONFIG);
+    
+    DW1000Ng::setEUI("AA:BB:CC:DD:EE:FF:00:01");
 
-  DW1000Ng::applyConfiguration(DEFAULT_CONFIG);
+    DW1000Ng::setPreambleDetectionTimeout(64);
+    DW1000Ng::setSfdDetectionTimeout(273);
+    DW1000Ng::setReceiveFrameWaitTimeoutPeriod(5000);
 
-  DW1000Ng::setDeviceAddress(6);
-  DW1000Ng::setNetworkId(10);
+    DW1000Ng::setNetworkId(RTLS_APP_ID);
+    DW1000Ng::setDeviceAddress(1);
+	
+    DW1000Ng::setAntennaDelay(16436);
+    
+    Serial.println(F("Committed configuration ..."));
+    // DEBUG chip info and registers pretty printed
+    char msg[128];
+    DW1000Ng::getPrintableDeviceIdentifier(msg);
+    Serial.print("Device ID: "); Serial.println(msg);
+    DW1000Ng::getPrintableExtendedUniqueIdentifier(msg);
+    Serial.print("Unique ID: "); Serial.println(msg);
+    DW1000Ng::getPrintableNetworkIdAndShortAddress(msg);
+    Serial.print("Network ID & Device Address: "); Serial.println(msg);
+    DW1000Ng::getPrintableDeviceMode(msg);
+    Serial.print("Device mode: "); Serial.println(msg); 
 
-  DW1000Ng::setAntennaDelay(16436);
-  Serial.println(F("Committed configuration ..."));
-  // DEBUG chip info and registers pretty printed
-  char msg[128];
-  DW1000Ng::getPrintableDeviceIdentifier(msg);
-  Serial.print("Device ID: "); Serial.println(msg);
-  DW1000Ng::getPrintableExtendedUniqueIdentifier(msg);
-  Serial.print("Unique ID: "); Serial.println(msg);
-  DW1000Ng::getPrintableNetworkIdAndShortAddress(msg);
-  Serial.print("Network ID & Device Address: "); Serial.println(msg);
-  DW1000Ng::getPrintableDeviceMode(msg);
-  Serial.print("Device mode: "); Serial.println(msg);
+  myLED.begin( LED_GPIO, 1 );         // initialze the myLED object. Here we have 1 LED attached to the LED_GPIO pin
+  myLED.brightness( LED_BRIGHT );     // set the LED photon intensity level
+  myLED.setPixel( 0, L_GREEN, 1 );    // set the LED colour and show it
 
-  DW1000Ng::attachReceivedHandler(handleReceived);
-
-    myLED.begin( LED_GPIO, 1 );         // initialze the myLED object. Here we have 1 LED attached to the LED_GPIO pin
-    myLED.brightness( LED_BRIGHT );     // set the LED photon intensity level
-    myLED.setPixel( 0, L_GREEN, 1 );    // set the LED colour and show it
-    delay( 2000 );
 }
 
 void loop() {
     // flash the LED
-    myLED.brightness( 0, 1 );           // turn the LED off
+    /*
+    myLED.brightness( 0, 1 );
     delay( 1000 );
 
-    myLED.brightness( LED_BRIGHT, 1 );  // turn the LED on
+    myLED.brightness( LED_BRIGHT, 1 ); 
     delay( 1000 );
+    */
 
-  if (receivedAck) {
-    timePollSent = DW1000NgUtils::bytesAsValue(data + 1, LENGTH_TIMESTAMP);
-    timePollAckReceived = DW1000NgUtils::bytesAsValue(data + 6, LENGTH_TIMESTAMP);
-    timeRangeSent = DW1000NgUtils::bytesAsValue(data + 11, LENGTH_TIMESTAMP);
-    // (re-)compute range as two-way ranging is done
-    double distance = DW1000NgRanging::computeRangeAsymmetric(timePollSent,
-                                                timePollReceived, 
-                                                timePollAckSent, 
-                                                timePollAckReceived, 
-                                                timeRangeSent, 
-                                                timeRangeReceived);
-    /* Apply simple bias correction */
-    distance = DW1000NgRanging::correctRange(distance);
-    
-    String rangeString = "Range: "; rangeString += distance; rangeString += " m";
-    Serial.println(rangeString);
+  if (received) {
+    numReceived++;
+    // get data as string
+    Serial.print("Received message ... #"); Serial.println(numReceived);
+    Serial.print("Data is ... "); Serial.println(message);
+    Serial.print("FP power is [dBm] ... "); Serial.println(DW1000.getFirstPathPower());
+    Serial.print("RX power is [dBm] ... "); Serial.println(DW1000.getReceivePower());
+    Serial.print("Signal quality is ... "); Serial.println(DW1000.getReceiveQuality());
+    received = false;
+  }
+  if (error) {
+    Serial.println("Error receiving a message");
+    error = false;
+    Serial.print("Error data is ... "); Serial.println(message);
   }
 } 
+
