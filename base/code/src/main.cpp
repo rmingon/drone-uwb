@@ -3,6 +3,8 @@
 #include <SPI.h>
 #include <AsyncTCP.h>
 #include <WiFi.h>
+#include <WiFiUdp.h>
+WiFiUDP udp;
 
 #include <DW1000Ng.hpp>
 #include <DW1000NgUtils.hpp>
@@ -10,6 +12,8 @@
 #include <DW1000NgRTLS.hpp>
 
 #include "config.h"
+
+#include <ArduinoJson.h>
 
 uint64_t timePollSent;
 uint64_t timePollReceived;
@@ -59,6 +63,19 @@ device_configuration_t DEFAULT_CONFIG = {
     PreambleCode::CODE_3
 };
 
+String uniq = "";
+
+#define EXPECTED_RANGE 7.94 // Recommended value for default values, refer to chapter 8.3.1 of DW1000 User manual
+#define EXPECTED_RANGE_EPSILON 0.05
+#define ACCURACY_THRESHOLD 5
+#define ANTENNA_DELAY_STEPS 1
+
+float samplingRate = 0;
+int accuracyCounter = 0;
+uint16_t antenna_delay = 16436;
+
+char packetBuffer[255];
+
 void handleReceived() {
   // status change on reception success
   received = true;
@@ -78,67 +95,63 @@ void receiver() {
     DW1000Ng::startReceive();
 }
 
-
-static void replyToServer(void* arg) {
-	AsyncClient* client = reinterpret_cast<AsyncClient*>(arg);
-
-	// send reply
-	if (client->space() > 32 && client->canSend()) {
-		char message[32];
-		client->add(message, strlen(message));
-		client->send();
-	}
+void transmit() {
+  DW1000Ng::setTransmitData(uniq);
+  delay(200);
+  DW1000Ng::startTransmit(TransmitMode::IMMEDIATE);
+  delay(200);
+  DW1000Ng::clearTransmitStatus();
+  delay(200);
+  DW1000Ng::startReceive();
 }
 
-/* event callbacks */
-static void handleData(void* arg, AsyncClient* client, void *data, size_t len) {
-	Serial.printf("\n data received from %s \n", client->remoteIP().toString().c_str());
-	Serial.write((uint8_t*)data, len);
-
+void sendDataToServer(String type, JsonDocument data) {
+  JsonDocument doc;
+  doc["uniq"] = uniq;
+  doc["type"] = type;
+  doc["data"] = data;
+  udp.beginPacket(SERVER_HOST_NAME, UDP_PORT);
+  serializeJson(doc, udp);
+  udp.endPacket();
 }
 
-void onConnect(void* arg, AsyncClient* client) {
-	Serial.printf("\n client has been connected to %s on port %d \n", SERVER_HOST_NAME, TCP_PORT);
-	replyToServer(client);
+void getMac() {
+  byte mac[6];
+  WiFi.macAddress(mac);
+  uniq = String(mac[0],HEX) +String(mac[1],HEX) +String(mac[2],HEX) +String(mac[3],HEX) + String(mac[4],HEX) + String(mac[5],HEX);
 }
-
 
 void setup() {
   Serial.begin(115200);
 
+  getMac();
+
   WiFi.begin(SSID, PASSWORD);
+
+  myLED.begin( LED_GPIO, 1 );         // initialze the myLED object. Here we have 1 LED attached to the LED_GPIO pin
+  myLED.brightness( LED_BRIGHT );     // set the LED photon intensity level
 
   // Wait some time to connect to wifi
   for(int i = 0; i < 10 && WiFi.status() != WL_CONNECTED; i++) {
+      myLED.setPixel( 0, L_RED, 1 );
       Serial.print(".");
       delay(1000);
   }
+  myLED.setPixel( 0, L_BLUE, 1 );
 
-	AsyncClient* client = new AsyncClient;
-	client->onData(&handleData, client);
-	client->onConnect(&onConnect, client);
-	client->connect(SERVER_HOST_NAME, TCP_PORT);
-
-
+  udp.begin(UDP_PORT);
 
   Serial.println(F("### DW1000Ng-arduino-receiver-test ###"));
-
-  DW1000Ng::initialize(5, 35, 14);
+  // initialize the driver
+  DW1000Ng::initializeNoInterrupt(5, 14);
   Serial.println(F("DW1000Ng initialized ..."));
-  // general configuration
+
   DW1000Ng::applyConfiguration(DEFAULT_CONFIG);
-  
-  DW1000Ng::setEUI("AA:BB:CC:DD:EE:FF:00:01");
 
-  DW1000Ng::setPreambleDetectionTimeout(64);
-  DW1000Ng::setSfdDetectionTimeout(273);
-  DW1000Ng::setReceiveFrameWaitTimeoutPeriod(5000);
-
-  DW1000Ng::setNetworkId(RTLS_APP_ID);
-  DW1000Ng::setDeviceAddress(1);
+  DW1000Ng::setDeviceAddress(6);
+  DW1000Ng::setNetworkId(10);
 
   DW1000Ng::setAntennaDelay(16436);
-  
   Serial.println(F("Committed configuration ..."));
   // DEBUG chip info and registers pretty printed
   char msg[128];
@@ -149,40 +162,41 @@ void setup() {
   DW1000Ng::getPrintableNetworkIdAndShortAddress(msg);
   Serial.print("Network ID & Device Address: "); Serial.println(msg);
   DW1000Ng::getPrintableDeviceMode(msg);
-  Serial.print("Device mode: "); Serial.println(msg); 
+  Serial.print("Device mode: "); Serial.println(msg);
 
-  DW1000Ng::attachSentHandler(handleSent);
-  DW1000Ng::attachReceivedHandler(handleReceived);
-
-  receiver();
-
-  myLED.begin( LED_GPIO, 1 );         // initialze the myLED object. Here we have 1 LED attached to the LED_GPIO pin
-  myLED.brightness( LED_BRIGHT );     // set the LED photon intensity level
+  transmit();
+  
   myLED.setPixel( 0, L_GREEN, 1 );    // set the LED colour and show it
 
+  JsonDocument data;
+  sendDataToServer("connect", data);
 }
 
 void loop() {
-    // flash the LED
-    /*
-    myLED.brightness( 0, 1 );
-    delay( 1000 );
 
-    myLED.brightness( LED_BRIGHT, 1 ); 
-    delay( 1000 );
-    */
+  int packetSize = udp.parsePacket();
 
-  if (received) {
-    numReceived++;
-    // get data as string
-    Serial.print("Received message ... #"); Serial.println(numReceived);
-    Serial.print("Data is ... "); Serial.println(message);
-    received = false;
+  if (packetSize) {
+    Serial.print(" Received packet from : "); Serial.println(udp.remoteIP());
+    Serial.print(" Size : "); Serial.println(packetSize);
+    int len = udp.read(packetBuffer, 255);
+    Serial.printf("Data : %s\n", packetBuffer);
+    udp.beginPacket(udp.remoteIP(), udp.remotePort());
+    udp.printf("UDP packet was received OK\r\n");
+    udp.endPacket();
   }
-  if (error) {
-    Serial.println("Error receiving a message");
-    error = false;
-    Serial.print("Error data is ... "); Serial.println(message);
+  
+  if(DW1000Ng::isReceiveDone()) {
+    myLED.setPixel( 1, L_GREEN, 1 );
+    DW1000Ng::getReceivedData(message);   
+    JsonDocument data;
+    data["uniq"] = message;
+    data["quality"] = DW1000Ng::getReceiveQuality();
+    data["power"] = DW1000Ng::getReceivePower();
+    sendDataToServer("range", data);
+    DW1000Ng::startReceive();
+    myLED.setPixel( 1, L_RED, 1 );    // set the LED colour and show it
   }
+
 } 
 
