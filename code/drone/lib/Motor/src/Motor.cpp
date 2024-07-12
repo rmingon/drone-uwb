@@ -10,15 +10,18 @@ Motor::Motor() {
 };
 
 void Motor::init() {
-  ledcSetup(0, 12000, 8);
+  ledcSetup(0, 200, 8);
   ledcAttachPin(PIN_RF, 0);
-  ledcSetup(1, 12000, 8);
+  ledcWrite(0, 48);
+  ledcSetup(1, 200, 8);
   ledcAttachPin(PIN_RR, 1);
-  ledcSetup(2, 12000, 8);
+  ledcWrite(1, 48);
+  ledcSetup(2, 200, 8);
   ledcAttachPin(PIN_LR, 2);
-  ledcSetup(3, 12000, 8);
+  ledcWrite(2, 48);
+  ledcSetup(3, 200, 8);
   ledcAttachPin(PIN_LF, 3);
-  setPwn(0);
+  ledcWrite(3, 48);
 }
 
 void Motor::setPwn(uint8_t pwm) {
