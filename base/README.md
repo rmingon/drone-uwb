@@ -2,6 +2,10 @@
 
 ##### This base use Arduino code for know distance between EACH drone and himself
 
+#### REAL VIEW
+
+![REAL VIEW](base/anchors.jpg)
+
 #### SCHEMATIC VIEW
 
 ![SCHEMATIC VIEW](base/base_with_battery/schematic_pcb.png?raw=true)
