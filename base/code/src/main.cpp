@@ -15,30 +15,15 @@ WiFiUDP udp;
 
 #include <ArduinoJson.h>
 
-uint64_t timePollSent;
-uint64_t timePollReceived;
-uint64_t timePollAckSent;
-uint64_t timePollAckReceived;
-uint64_t timeRangeSent;
-uint64_t timeRangeReceived;
-
-volatile boolean received = false;
-volatile boolean error = false;
-volatile boolean sentAck = false;
-volatile int16_t numReceived = 0;
-String message;
-
 int16_t sentNum = 0;
 
 #define LEN_DATA 16
 byte data[LEN_DATA];
+String message;
 
 #define LED_TYPE        LED_STRIP_WS2812
-
 #define LED_TYPE_IS_RGBW 0   // if the LED is an RGBW type, change the 0 to 1
-
 #define LED_GPIO 17     // change this number to be the GPIO pin connected to the LED
-
 #define LED_BRIGHT 30   // sets how bright the LED is. O is off; 255 is burn your eyeballs out (not recommended)
 
 // pick the colour you want from the list here and change it in setup()
@@ -75,19 +60,6 @@ int accuracyCounter = 0;
 uint16_t antenna_delay = 16436;
 
 char packetBuffer[255];
-
-void handleReceived() {
-  // status change on reception success
-  received = true;
-}
-void handleSent() {
-    // status change on sent success
-    sentAck = true;
-}
-
-void handleError() {
-  error = true;
-}
 
 void receiver() {
     DW1000Ng::forceTRxOff();
@@ -169,7 +141,7 @@ void setup() {
   myLED.setPixel( 0, L_GREEN, 1 );    // set the LED colour and show it
 
   JsonDocument data;
-  sendDataToServer("connect", data);
+  sendDataToServer("anchor", data);
 }
 
 void loop() {
