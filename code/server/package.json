@@ -21,7 +21,8 @@
   "homepage": "https://github.com/rmingon/drone-uwb#readme",
   "devDependencies": {
     "@types/node": "^18.13.0",
-    "typescript": "^4.9.5"
+    "typescript": "^4.9.5",
+    "@types/bun": "latest"
   },
   "dependencies": {
     "@types/ws": "^8.5.4",
