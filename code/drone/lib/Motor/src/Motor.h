@@ -2,7 +2,6 @@
 #define MOTOR_H
 
 #include <Arduino.h>
-#include "config.h"
 
 class Motor {
   private:
@@ -13,6 +12,7 @@ class Motor {
   public:
     Motor();
     void init();
+    void arm();
     void setPwn(uint8_t);
     void front(uint8_t);
     void left(uint8_t);
