@@ -199,6 +199,10 @@ void setup() {
   delay(1000);
 
   motor.init();
+
+  delay(300);
+
+  motor.arm();
   
   delay(3000);
 
@@ -278,7 +282,7 @@ void loop() {
   calculatePid();
 
 
-  // setMotorPids();
+  setMotorPids();
 
   receiveControl();
 
@@ -403,12 +407,6 @@ void calculatePid() {
   pid_current[YAW] = pid_p[YAW] + pid_i[YAW] + pid_d[YAW];
 }
 
-
-/* 
-* Sets the PID values to motors 
-* THERE MIGHT BE SOME ERRORS WITH THE SIGNS of the pid variables
-* TODO: Write down the orientation 
-*/
 void setMotorPids() {
   if(mode == 1 || mode == 0) {
     motor.rl(throttle + pid_current[PITCH] + pid_current[ROLL] + pid_current[YAW]);      // Set PID for front right motor
@@ -421,10 +419,6 @@ void setMotorPids() {
   }
 }
 
-/*
- * Automatic emergency landing:
- * Decrease throttle slowly and set desired angle to 0
- */
 void emergencyLanding() {
   throttle = throttle - 0.25;
       
@@ -433,16 +427,10 @@ void emergencyLanding() {
   angle_desired[2] = 0.0;
 }
 
-/**
- * Sets the given speed for all motors
- */
 void setSpeedForAllMotors(double speed) {
   motor.setPwn(speed);
 }
 
-/**
- * Low pass filter the gyro's data using a complementary filter 
- */
 void filterAngle() {
   float angle_new[3];
 
@@ -457,10 +445,6 @@ void filterAngle() {
   angle_current[YAW] = value * angle_current[YAW] + (1 - value) * angle_new[YAW];
 }
 
-
-/**
- * Reads the gyro and saves the values
- */
 void readGyro() {
   /* Ask gyro for gyro data */
   Wire.beginTransmission(MPU_ADDRESS);
@@ -484,10 +468,6 @@ void readGyro() {
   angle_gyro[YAW] = angle_gyro[YAW] - angle_gyro_offset[YAW];
 }
 
-
-/**
- *  Reads the accelerometer and saves the values
- */
 void readAccelerometer() {
   /* Ask gyro for acceleration data */
   Wire.beginTransmission(MPU_ADDRESS);
@@ -633,10 +613,6 @@ void receiveControl() {
 
 }
 
-
-/**
- * Sends the controller's settings and measured data for one dimension to the remote controller
- */
 void sendData1(int angleType) {
   Serial.println("B1" + 
     String(throttle) + "|" + 
@@ -654,10 +630,11 @@ void sendData1(int angleType) {
     String(mode) + "E");
 }
 
-/**
- * Sends the controller's settings and measured data for two dimensions to the remote controller
- */
 void sendData2() {
+  Serial.println(throttle + pid_current[PITCH] + pid_current[ROLL] + pid_current[YAW]);
+  Serial.println(throttle + pid_current[PITCH] - pid_current[ROLL] - pid_current[YAW]);
+  Serial.println(throttle - pid_current[PITCH] - pid_current[ROLL] + pid_current[YAW]);
+  Serial.println(throttle - pid_current[PITCH] + pid_current[ROLL] - pid_current[YAW]);
   Serial.println("B2" +
     String(throttle) + "|" + 
     String(angle_current[PITCH]) + "|" + 
