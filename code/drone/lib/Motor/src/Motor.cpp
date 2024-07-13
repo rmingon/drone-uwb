@@ -83,6 +83,23 @@ void Motor::lrSetOffset(uint8_t pwm) {
   this->lr_offset = pwm;
 }
 
+void Motor::arm() {
+  for(int i = 0; i < 120; i++) {
+    ledcWrite(0, 48+i);
+    ledcWrite(1, 48+i);
+    ledcWrite(2, 48+i);
+    ledcWrite(3, 48+i);
+    delay(3);
+  }
+  for(int x = 120; x > 1; x--) {
+    ledcWrite(0, 48+x);
+    ledcWrite(1, 48+x);
+    ledcWrite(2, 48+x);
+    ledcWrite(3, 48+x);
+    delay(3);
+  }
+}
+
 void Motor::test() {
   lr(40);
   delay(300);
