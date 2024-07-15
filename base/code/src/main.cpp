@@ -49,11 +49,6 @@ device_configuration_t DEFAULT_CONFIG = {
 
 String uniq = "";
 
-#define EXPECTED_RANGE 7.94 // Recommended value for default values, refer to chapter 8.3.1 of DW1000 User manual
-#define EXPECTED_RANGE_EPSILON 0.05
-#define ACCURACY_THRESHOLD 5
-#define ANTENNA_DELAY_STEPS 1
-
 float samplingRate = 0;
 int accuracyCounter = 0;
 uint16_t antenna_delay = 16436;
@@ -62,7 +57,6 @@ char packetBuffer[255];
 
 void receiver() {
     DW1000Ng::forceTRxOff();
-    // so we don't need to restart the receiver manually
     DW1000Ng::startReceive();
 }
 
@@ -99,10 +93,9 @@ void setup() {
 
   WiFi.begin(SSID, PASSWORD);
 
-  myLED.begin( LED_GPIO, 1 );         // initialze the myLED object. Here we have 1 LED attached to the LED_GPIO pin
-  myLED.brightness( LED_BRIGHT );     // set the LED photon intensity level
+  myLED.begin( LED_GPIO, 2 ); 
+  myLED.brightness( LED_BRIGHT );    
 
-  // Wait some time to connect to wifi
   for(int i = 0; i < 10 && WiFi.status() != WL_CONNECTED; i++) {
       myLED.setPixel( 0, L_RED, 1 );
       Serial.print(".");
@@ -151,10 +144,17 @@ void loop() {
     Serial.print(" Received packet from : "); Serial.println(udp.remoteIP());
     Serial.print(" Size : "); Serial.println(packetSize);
     int len = udp.read(packetBuffer, 255);
-    Serial.printf("Data : %s\n", packetBuffer);
-    udp.beginPacket(udp.remoteIP(), udp.remotePort());
-    udp.printf("UDP packet was received OK\r\n");
-    udp.endPacket();
+    JsonDocument doc;
+    DeserializationError error = deserializeJson(doc, packetBuffer);
+    if (error) {
+      Serial.print(F("deserializeJson() failed: "));
+      Serial.println(error.f_str());
+      return;
+    }
+
+    if (doc["reboot"]) {
+      ESP.restart();
+    }
   }
   
   if(DW1000Ng::isReceiveDone()) {
