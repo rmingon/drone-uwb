@@ -109,7 +109,7 @@ String uniq = "";
 
 uint8_t battery_pin = 13;
 
-char packetBuffer[255];
+char packetBuffer[500];
 
 int16_t ax, ay, az,gx, gy, gz;
 
@@ -182,12 +182,28 @@ void emergencyLanding();
 void sendData1(int);
 void calibrateAngleOffsets();
 
-
 void sendDataToServer(String type, JsonDocument data) {
   JsonDocument doc;
   doc["uniq"] = uniq;
   doc["type"] = type;
   doc["data"] = data;
+  udp.beginPacket(SERVER_HOST_NAME, UDP_PORT);
+  serializeJson(doc, udp);
+  udp.endPacket();
+}
+
+void sendPositionToServer() {
+  JsonDocument doc;
+  JsonDocument position;
+  
+  position["pitch"] = angle_current[PITCH];
+  position["roll"] = angle_current[ROLL];
+  position["yaw"] = angle_current[YAW];
+  position["throttle"] = throttle;
+
+  doc["uniq"] = uniq;
+  doc["type"] = "position";
+  doc["data"] = position;
   udp.beginPacket(SERVER_HOST_NAME, UDP_PORT);
   serializeJson(doc, udp);
   udp.endPacket();
@@ -221,6 +237,8 @@ void setup() {
   }
 
   udp.begin(UDP_PORT);
+  JsonDocument data;
+  sendDataToServer("drone", data);
 
   Wire.begin(21, 22, 700000);
   setupMpu6050Registers();
@@ -258,9 +276,6 @@ void setup() {
   }
 
   myLED.setPixel( 0, L_GREEN, 1 );
-
-  JsonDocument data;
-  sendDataToServer("drone", data);
 }
 
 void loop() {
@@ -272,11 +287,12 @@ void loop() {
   readGyro();
   readAccelerometer();
 
+  transmit();
   /* Filter the data to reduce noise */
   filterAngle();
 
   /* Receive the remote controller's commands */
-  // receiveControl();
+  receiveControl();
 
   /* Calculate PID */
   calculatePid();
@@ -286,7 +302,9 @@ void loop() {
 
   receiveControl();
 
-  sendData2();
+  // sendData2();
+
+  sendPositionToServer();
 
   /*
   
@@ -535,12 +553,18 @@ void receiveControl() {
       return;
     }
 
+    if (doc["reboot"]) {
+      ESP.restart();
+    }
+
     throttle = doc["t"];
     angle_desired[PITCH] = doc["p"];
     angle_desired[ROLL] = doc["r"];
     angle_desired[YAW] = doc["y"];
 
   }
+
+
 
 /*
   if(Serial.available()) {
@@ -610,7 +634,6 @@ void receiveControl() {
     }
   }
 */
-
 }
 
 void sendData1(int angleType) {
