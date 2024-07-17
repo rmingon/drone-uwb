@@ -105,6 +105,9 @@ void setup() {
 
   udp.begin(UDP_PORT);
 
+  JsonDocument data;
+  sendDataToServer("anchor", data);
+
   Serial.println(F("### DW1000Ng-arduino-receiver-test ###"));
   // initialize the driver
   DW1000Ng::initializeNoInterrupt(5, 14);
@@ -131,9 +134,6 @@ void setup() {
   transmit();
   
   myLED.setPixel( 0, L_GREEN, 1 );    // set the LED colour and show it
-
-  JsonDocument data;
-  sendDataToServer("anchor", data);
 }
 
 void loop() {
@@ -155,7 +155,7 @@ void loop() {
     if (doc["reboot"]) {
       ESP.restart();
     }
-  }
+  } 
   
   if(DW1000Ng::isReceiveDone()) {
     myLED.setPixel( 1, L_GREEN, 1 );
@@ -166,7 +166,7 @@ void loop() {
     data["power"] = DW1000Ng::getReceivePower();
     sendDataToServer("range", data);
     DW1000Ng::startReceive();
-    myLED.setPixel( 1, L_RED, 1 );    // set the LED colour and show it
+    myLED.setPixel( 1, L_RED, 1 );
   }
 
 } 
