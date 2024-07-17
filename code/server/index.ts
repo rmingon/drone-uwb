@@ -13,7 +13,7 @@ interface DroneConnection {}
 
 interface AnchorConnection {}
 
-interface AnchorRange {
+export interface AnchorRange {
   uniq: string; // drone uniq
   quality: string;
   power: string;
@@ -32,7 +32,7 @@ const listener = new Subject<any>();
 await Bun.udpSocket({
   port: 7051,
   socket: {
-    data(socket, buf, port, addr) {
+    data(_socket, buf, _port, addr) {
       const data : Data<DataType> = JSON.parse(buf.toString())
       data.ip = addr
       listener.next(data);
@@ -50,22 +50,29 @@ const drones = new Map<string, Drone>()
 
 $anchorConnection.subscribe(({uniq, ip}) => {
   anchors.set(uniq, new Anchor(uniq, ip))
+  console.log(`anchors ${anchors.size}`)
 })
 
-$anchorRange.subscribe(({uniq, ip}) => {
+$anchorRange.subscribe(({uniq, data}) => {
   const anchor = anchors.get(uniq)
   if (anchor) 
-    anchor.setRange()
+    anchor.setRange(data)
 })
 
 $droneConnection.subscribe(({uniq, ip}) => {
   drones.set(uniq, new Drone(uniq, ip))
+  console.log(`drones ${drones.size}`)
 })
 
 $dronePosition.subscribe((position) => {
   const drone = drones.get(position.uniq)
   if (drone)
     drone.setPosition(position.data)
+})
+
+interval(1000).subscribe(() => {
+  
+
 })
 
 console.log("GO")

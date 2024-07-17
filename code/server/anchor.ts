@@ -1,3 +1,7 @@
+import type { AnchorRange } from ".";
+
+const client = await Bun.udpSocket({});
+
 export class Anchor {
     id: string;
     ip: string;
@@ -8,11 +12,19 @@ export class Anchor {
     }
 
     reboot() {
-
+        this.udpSend({reboot: true})
     }
 
-    setRange() {
-        throw new Error("Method not implemented.");
+    setRange({uniq, quality, power}: AnchorRange) {
+        if (uniq[0] === "A") // ANCHOR
+            anchorsRanging[uniq] =      
+        if (uniq[0] === "D") // DRONE
+
+        // console.log(data)
+    }
+
+    udpSend(data: {}) {
+        client.send(JSON.stringify(data), 7051, this.ip);
     }
 
 }
