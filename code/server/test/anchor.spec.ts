@@ -1,5 +1,5 @@
 import { expect, test, describe } from "bun:test";
-import { Anchor } from "../anchor";
+import { Anchor } from "../src/anchor";
 
 
 describe("Anchor test", () => {

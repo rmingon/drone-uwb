@@ -1,4 +1,5 @@
 import type { AnchorRange } from ".";
+import { getAnchorRanging, setAnchorRanging } from "./ranging";
 
 const client = await Bun.udpSocket({});
 
@@ -9,6 +10,7 @@ export class Anchor {
     constructor(id: string, ip: string) {
         this.id = id
         this.ip = ip
+        console.log(ip)
     }
 
     reboot() {
@@ -17,10 +19,11 @@ export class Anchor {
 
     setRange({uniq, quality, power}: AnchorRange) {
         if (uniq[0] === "A") // ANCHOR
-            anchorsRanging[uniq] =      
+            setAnchorRanging(this.id, uniq.slice(1, 13), quality)
         if (uniq[0] === "D") // DRONE
-
-        // console.log(data)
+            setAnchorRanging(this.id, uniq.slice(1, 13), quality)
+        console.log(uniq)
+        getAnchorRanging(this.id, uniq)
     }
 
     udpSend(data: {}) {
