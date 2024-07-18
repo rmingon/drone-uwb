@@ -30,7 +30,6 @@ static const crgb_t L_RED = 0xff0000;
 static const crgb_t L_GREEN = 0x00ff00;
 static const crgb_t L_BLUE = 0x0000ff;
 static const crgb_t L_WHITE = 0xe0e0e0;
-
 LiteLED myLED( LED_TYPE, LED_TYPE_IS_RGBW );    // create the LiteLED object; we're calling it "myLED"
 
 device_configuration_t DEFAULT_CONFIG = {
@@ -61,7 +60,7 @@ void receiver() {
 }
 
 void transmit() {
-  DW1000Ng::setTransmitData(uniq);
+  DW1000Ng::setTransmitData("A"+uniq);
   delay(200);
   DW1000Ng::startTransmit(TransmitMode::IMMEDIATE);
   delay(200);
@@ -120,7 +119,7 @@ void setup() {
 
   DW1000Ng::setAntennaDelay(16436);
   Serial.println(F("Committed configuration ..."));
-  // DEBUG chip info and registers pretty printed
+
   char msg[128];
   DW1000Ng::getPrintableDeviceIdentifier(msg);
   Serial.print("Device ID: "); Serial.println(msg);
@@ -131,9 +130,11 @@ void setup() {
   DW1000Ng::getPrintableDeviceMode(msg);
   Serial.print("Device mode: "); Serial.println(msg);
 
+  delay(1000);
+  
   transmit();
   
-  myLED.setPixel( 0, L_GREEN, 1 );    // set the LED colour and show it
+  myLED.setPixel( 0, L_GREEN, 1 );
 }
 
 void loop() {
@@ -159,7 +160,7 @@ void loop() {
   
   if(DW1000Ng::isReceiveDone()) {
     myLED.setPixel( 1, L_GREEN, 1 );
-    DW1000Ng::getReceivedData(message);   
+    DW1000Ng::getReceivedData(message);
     JsonDocument data;
     data["uniq"] = message;
     data["quality"] = DW1000Ng::getReceiveQuality();
