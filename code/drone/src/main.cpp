@@ -22,18 +22,16 @@ Motor motor;
 
 int DISPLAY_VERSION = 3;                            // Which display should be used for the remote controller? 1D or 2D version?
 
-float COMPLEMENTARY_FILTER = 0.98;                   // Complementary filter for combining acc and gyro
+float COMPLEMENTARY_FILTER = 0.80;                   // Complementary filter for combining acc and gyro
 
-double throttle = 50;                             // Desired throttle
+double throttle = THROTTLE_MINIMUM + 5;                             // Desired throttle
 float angle_desired[3] = {0.0, 0.0, 0.0};           // Desired angle
 
-float gain_p[3] = {1.5, 1.5, 1.5};                    // Gain proportional
-float gain_i[3] = {0, 0, 0};                        // Gain integral
-float gain_d[3] = {0.4, 0.4, 0.4};                    // Gain derivetive
+float gain_p[3] = {0.05, 0.05, 0.05};                    // Gain proportional
+float gain_i[3] = {0.05, 0.05, 0.05};                        // Gain integral
+float gain_d[3] = {0.05, 0.05, 0.05};                    // Gain derivetive
 
 float filter = 0.9;                                 // Complementary filter for pid
-
-int mode = 0;                                       // Mode for testing purpose: 0 = all motors | 1 = motor 1 & 3 | 2 = motor 2 & 4
 
 #define PITCH 0                                     // Rotation forward/backward
 #define ROLL 1                                      // Rotation left/right
@@ -54,8 +52,8 @@ float pid_d[3] = {0, 0, 0};                         // PID derivitive error
 float angle_current[3];                             // Angle measured after filtering
 float angle_acc[3];                                 // Angle measured using accelerometer
 float angle_gyro[3];                                // Angle measured using gyro
-float angle_acc_offset[3] = {0.0,0.0,0.0};          // Offsets for gyro angle measurement
-float angle_gyro_offset[3] = {0.0,0.0,0.0};         // Offsets for acc angle measurement
+float angle_acc_offset[3] = {0.5,0.5,0.5};          // Offsets for gyro angle measurement
+float angle_gyro_offset[3] = {0.5,0.5,0.5};         // Offsets for acc angle measurement
 
 float angle_acc_raw[3];                             // Accelerator raw data
 int16_t angle_gyro_raw[3];                          // Gyro raw data
@@ -66,28 +64,15 @@ double time_elapsed;                                // Elapsed time during the l
 
 float rad_to_deg = 180/3.141592654;                 // Constant for convert radian to degrees
 
-float blink_counter = 0;                            // The blink counter is used to let the build-in LED blink every x loops to see whether the programm is still running or not
-bool blink_status = false;                             // Is the build-in LED currently on or off?
-
 float lastCommand = 0;                              // Time when the last comment has been recieved
 
 int sendDataCounter = 0;                            // Counts when data has been sent the last time to reduce amount of data
-
-int buffersize=1000;     //Amount of readings used to average, make it higher to get more precision but sketch will be slower  (default:1000)
-int acel_deadzone=8;     //Acelerometer error allowed, make it lower to get more precision, but sketch may not converge  (default:8)
-int giro_deadzone=1;     //Giro error allowed, make it lower to get more precision, but sketch may not converge  (default:1)
 
 Adafruit_BMP280 bmp;
 
 uint32_t altitude_forced = 0;
 uint32_t altitude = 0;
 
-boolean fly = true;
-
-// message sent/received state
-volatile boolean sentAck = false;
-volatile boolean receivedAck = false;
-// data buffer
 #define LEN_DATA 16
 byte data[LEN_DATA];
 uint32_t lastActivity;
@@ -95,9 +80,9 @@ uint32_t resetPeriod = 250;
 uint16_t replyDelayTimeUS = 3000;
 
 #define LED_TYPE        LED_STRIP_WS2812
-#define LED_TYPE_IS_RGBW 0   // if the LED is an RGBW type, change the 0 to 1
-#define LED_GPIO GPIO_NUM_14     // change this number to be the GPIO pin connected to the LED
-#define LED_BRIGHT 30   // sets how bright the LED is. O is off; 255 is burn your eyeballs out (not recommended)
+#define LED_TYPE_IS_RGBW 0
+#define LED_GPIO GPIO_NUM_14
+#define LED_BRIGHT 30
 static const crgb_t L_RED = 0xff0000;
 static const crgb_t L_GREEN = 0x00ff00;
 static const crgb_t L_BLUE = 0x0000ff;
@@ -177,7 +162,6 @@ void setMotorPids();
 void receiveControl();
 void setMotorPids();
 void sendData2();
-void setSpeedForAllMotors(double);
 void emergencyLanding();
 void sendData1(int);
 void calibrateAngleOffsets();
@@ -220,7 +204,7 @@ void setup() {
 
   motor.arm();
   
-  delay(3000);
+  delay(1000);
 
   Serial.begin(115200);
 
@@ -240,7 +224,7 @@ void setup() {
   JsonDocument data;
   sendDataToServer("drone", data);
 
-  Wire.begin(21, 22, 700000);
+  Wire.begin(21, 22, 500000);
   setupMpu6050Registers();
   calibrateAngleOffsets();
 
@@ -287,7 +271,7 @@ void loop() {
   readGyro();
   readAccelerometer();
 
-  transmit();
+  // transmit();
   /* Filter the data to reduce noise */
   filterAngle();
 
@@ -297,99 +281,11 @@ void loop() {
   /* Calculate PID */
   calculatePid();
 
-
   setMotorPids();
-
-  receiveControl();
 
   // sendData2();
 
   sendPositionToServer();
-
-  /*
-  
-  	int16_t milliswrap = sin(millis()*2/SINE_DURATION*PI)*PEAKSPEED;
-	
-	esc0.sendThrottle3D(10);
-	esc1.sendThrottle3D(10);
-	esc2.sendThrottle3D(10);
-	esc3.sendThrottle3D(10);
-
-
-  Wire.beginTransmission(MPU_addr);
-  Wire.write(0x3B);
-  Wire.endTransmission(false);
-  Wire.requestFrom(MPU_addr,14,true);
-  AcX=Wire.read()<<8|Wire.read();
-  AcY=Wire.read()<<8|Wire.read();
-  AcZ=Wire.read()<<8|Wire.read();
-  int xAng = map(AcX,minVal,maxVal,-180,0);
-  int yAng = map(AcY,minVal,maxVal,-180,0);
-  int zAng = map(AcZ,minVal,maxVal,-180,0);
-  x= RAD_TO_DEG * (atan2(-yAng, -zAng)+PI);
-  y= RAD_TO_DEG * (atan2(-xAng, -zAng)+PI);
-  z= RAD_TO_DEG * (atan2(-yAng, -xAng)+PI);
-  
-  newx = x*10;
-  newy = y*10;
-  newz = z*10;
-
-  Serial.print("X= ");
-  Serial.println((float)newx/10,1);
-   
-  Serial.print("Y= ");
-  Serial.println((float)newy/10,1);
-   
-  Serial.print("Z= ");
-  Serial.println((float)newz/10,1);
-
-  delay(500);
-
-  
-  int x = map((float)newx/10, 0, 360, MIN_MOTOR_PWM, MAX_MOTOR_PWM);
-  int y = map((float)newy/10, 0, 360, MIN_MOTOR_PWM, MAX_MOTOR_PWM);
-
-  Serial.println(x);
-  Serial.println(y);
-
-  int packetSize = udp.parsePacket();
-
-  if (packetSize) {
-    Serial.print(" Received packet from : "); Serial.println(udp.remoteIP());
-    Serial.print(" Size : "); Serial.println(packetSize);
-    int len = udp.read(packetBuffer, 255);
-    Serial.printf("Data : %s\n", packetBuffer);
-    udp.beginPacket(udp.remoteIP(), udp.remotePort());
-    udp.printf("UDP packet was received OK\r\n");
-    udp.endPacket();
-  }
-  
-  if (fly) {
-    if (-y+x > 0) {
-      esc0.sendThrottle3D(-y+x + motor_dynamic);
-    } else {
-      esc0.sendThrottle3D(motor_dynamic);
-    }
-    if (y+x > 0) {
-      esc1.sendThrottle3D(y+x + motor_dynamic);
-    } else {
-      esc1.sendThrottle3D(motor_dynamic);
-    }
-    if (-y+-x > 0) {
-      esc2.sendThrottle3D(-y+-x + motor_dynamic);
-    } else {
-      esc2.sendThrottle3D(motor_dynamic);
-    }
-    if (y+-x > 0) {
-      esc3.sendThrottle3D(y+-x + motor_dynamic);
-    } else {
-      esc3.sendThrottle3D(motor_dynamic);
-    }
-  }
-  */
-
-  // int alti = map(altitude, altitude_forced-50, altitude_forced+50, 0, 200);
-
 }
 
 void calculatePid() {
@@ -426,15 +322,18 @@ void calculatePid() {
 }
 
 void setMotorPids() {
-  if(mode == 1 || mode == 0) {
-    motor.rl(throttle + pid_current[PITCH] + pid_current[ROLL] + pid_current[YAW]);      // Set PID for front right motor
-    motor.lr(throttle - pid_current[PITCH] - pid_current[ROLL] + pid_current[YAW]);      // Set PID for back left motor
-  }
-
-  if(mode == 2 || mode == 0) {
-    motor.lf(throttle + pid_current[PITCH] - pid_current[ROLL] - pid_current[YAW]);      // Set PID for front left motor
-    motor.rr(throttle - pid_current[PITCH] + pid_current[ROLL] - pid_current[YAW]);      // Set PID for back right motor
-  }
+    // motor.rl(72);      // Set PID for front right motor
+    int rl = throttle + pid_current[PITCH] + pid_current[ROLL] + pid_current[YAW];
+    motor.rl(rl > THROTTLE_MINIMUM ? rl : THROTTLE_MINIMUM);      // Set PID for front right motor
+    // motor.lr(throttle);      // Set PID for back left motor
+    int lr = throttle - pid_current[PITCH] - pid_current[ROLL] + pid_current[YAW];
+    motor.lr(lr > THROTTLE_MINIMUM ? lr : THROTTLE_MINIMUM);      // Set PID for back left motor
+    // motor.lf(throttle);      // Set PID for front left motor
+    int lf = throttle + pid_current[PITCH] - pid_current[ROLL] - pid_current[YAW];
+    motor.lf(lf > THROTTLE_MINIMUM ? lf : THROTTLE_MINIMUM);      // Set PID for front left motor
+    // motor.rr(throttle);      // Set PID for back right motor
+    int rr = throttle - pid_current[PITCH] + pid_current[ROLL] - pid_current[YAW];
+    motor.rr(rr > THROTTLE_MINIMUM ? rr : THROTTLE_MINIMUM);      // Set PID for back right motor
 }
 
 void emergencyLanding() {
@@ -443,10 +342,6 @@ void emergencyLanding() {
   angle_desired[0] = 0.0;
   angle_desired[1] = 0.0;
   angle_desired[2] = 0.0;
-}
-
-void setSpeedForAllMotors(double speed) {
-  motor.setPwn(speed);
 }
 
 void filterAngle() {
@@ -511,7 +406,7 @@ void readAccelerometer() {
 }
 
 void calibrateAngleOffsets() {
-  float num = 100.0;
+  int num = 200;
   float gyro_avg[3] = {0.0,0.0,0.0};
   float acc_avg[3] = {0.0,0.0,0.0};
   for(int i = 0; i < num; i++){
@@ -649,8 +544,7 @@ void sendData1(int angleType) {
     String(time_elapsed, 6) + "|" + 
     String(filter, 3) + "|" + 
     String(angle_gyro[angleType], 6) + "|" + 
-    String(angle_acc[angleType], 6) + "|" + 
-    String(mode) + "E");
+    String(angle_acc[angleType], 6));
 }
 
 void sendData2() {
