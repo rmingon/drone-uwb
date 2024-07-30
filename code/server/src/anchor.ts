@@ -8,7 +8,7 @@ export class Anchor {
     ip: string;
 
     constructor(id: string, ip: string) {
-        this.id = id
+        this.id = id.slice(0, 12)
         this.ip = ip
         console.log(ip)
     }
