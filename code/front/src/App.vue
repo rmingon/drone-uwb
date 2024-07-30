@@ -1,44 +1,30 @@
 <script setup lang="ts">
-import Drone3d from './components/Drone3d.vue'
-import { useWebSocket } from '@vueuse/core'
-import {computed, reactive, ref, watch} from "vue";
-interface Drone {
-  x: number
-  y: number
-  altitude: number
-  id: number
-}
-
-const { status, data, send, open, close } = useWebSocket<Drone>('ws://127.0.0.1:8081/user')
-
-const pwm = ref(0)
-
-let drone = reactive({
-  x: 0,
-  y: 0,
-  altitude: 0,
-  id: 0
-})
-
-if (data)  {
-  console.log(data)
-  // drone = data.value as Drone
-}
-
-const sendToServer = (cmd: object) => {
-  console.log(cmd)
-  send(JSON.stringify(cmd))
-}
+import HelloWorld from './components/HelloWorld.vue'
 </script>
 
 <template>
-
-  {{data}}<br>
-  {{status}}<br>
-  <div class="flex-col">
-    <button class="border p-4" @click="sendToServer({'cmd': 'FLY'})">FLY</button>
-    <button class="border p-4" @click="sendToServer({'cmd': 'STOP'})">STOP</button>
-    <input type="number" name="" id="" v-model="pwm">
-    <button class="border p-4" @click="sendToServer({'cmd': 'SPEED', params: pwm})">SET SPEED</button>
+  <div>
+    <a href="https://vitejs.dev" target="_blank">
+      <img src="/vite.svg" class="logo" alt="Vite logo" />
+    </a>
+    <a href="https://vuejs.org/" target="_blank">
+      <img src="./assets/vue.svg" class="logo vue" alt="Vue logo" />
+    </a>
   </div>
+  <HelloWorld msg="Vite + Vue" />
 </template>
+
+<style scoped>
+.logo {
+  height: 6em;
+  padding: 1.5em;
+  will-change: filter;
+  transition: filter 300ms;
+}
+.logo:hover {
+  filter: drop-shadow(0 0 2em #646cffaa);
+}
+.logo.vue:hover {
+  filter: drop-shadow(0 0 2em #42b883aa);
+}
+</style>
