@@ -24,12 +24,12 @@ int DISPLAY_VERSION = 3;                            // Which display should be u
 
 float COMPLEMENTARY_FILTER = 0.80;                   // Complementary filter for combining acc and gyro
 
-double throttle = THROTTLE_MINIMUM + 5;                             // Desired throttle
+double throttle = THROTTLE_MINIMUM + 30;                             // Desired throttle
 float angle_desired[3] = {0.0, 0.0, 0.0};           // Desired angle
 
-float gain_p[3] = {0.05, 0.05, 0.05};                    // Gain proportional
-float gain_i[3] = {0.05, 0.05, 0.05};                        // Gain integral
-float gain_d[3] = {0.05, 0.05, 0.05};                    // Gain derivetive
+float gain_p[3] = {3, 3, 3};                   // Gain proportional
+float gain_i[3] = {0.02, 0.02, 0.02};                        // Gain integral
+float gain_d[3] = {20, 20, 20};                    // Gain derivetive
 
 float filter = 0.9;                                 // Complementary filter for pid
 
@@ -94,7 +94,7 @@ String uniq = "";
 
 uint8_t battery_pin = 13;
 
-char packetBuffer[500];
+char packetBuffer[2000];
 
 int16_t ax, ay, az,gx, gy, gz;
 
@@ -121,7 +121,7 @@ void getMac() {
   uniq = String(mac[0],HEX) +String(mac[1],HEX) +String(mac[2],HEX) +String(mac[3],HEX) + String(mac[4],HEX) + String(mac[5],HEX);
 }
 
-void transmit() {
+void transmitPosition() {
   DW1000Ng::setTransmitData(uniq);
   DW1000Ng::startTransmit(TransmitMode::IMMEDIATE);
   DW1000Ng::clearTransmitStatus();
@@ -193,18 +193,68 @@ void sendPositionToServer() {
   udp.endPacket();
 }
 
+#include <ESP32Servo.h>
+Servo esc1, esc2, esc3, esc4;
+
+void calibMotor() {
+	ESP32PWM::allocateTimer(0);
+	ESP32PWM::allocateTimer(1);
+	ESP32PWM::allocateTimer(2);
+	ESP32PWM::allocateTimer(3);
+
+  esc1.setPeriodHertz(200);
+  esc1.attach(25, 1000, 2000);
+
+  esc2.setPeriodHertz(200);
+  esc2.attach(26, 1000, 2000);
+
+  esc3.setPeriodHertz(200);
+  esc3.attach(27, 1000, 2000);
+
+  esc4.setPeriodHertz(200);
+  esc4.attach(32, 1000, 2000);
+
+  esc1.write(0);
+  esc2.write(0);
+  esc3.write(0);
+  esc4.write(0);
+
+  delay(2000);
+
+  esc1.write(255);
+  esc2.write(255);
+  esc3.write(255);
+  esc4.write(255);
+
+  delay(5000);
+
+  esc1.write(10);
+  esc2.write(10);
+  esc3.write(10);
+  esc4.write(10);
+
+  delay(5000);
+
+  esc1.write(0);
+  esc2.write(0);
+  esc3.write(0);
+  esc4.write(0);
+
+  delay(30000);
+}
 void setup() {
   WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);  
+  delay(2000);
 
-  delay(1000);
-
-  motor.init();
+  motor.init(THROTTLE_MINIMUM, THROTTLE_MAXIMUM);
 
   delay(300);
 
   motor.arm();
   
   delay(1000);
+  
+  motor.test();
 
   Serial.begin(115200);
 
@@ -212,6 +262,28 @@ void setup() {
   myLED.brightness( LED_BRIGHT );     // set the LED photon intensity level
 
   getMac();
+
+  Wire.begin(21, 22, 400000);
+  setupMpu6050Registers();
+  calibrateAngleOffsets();
+
+  pinMode(battery_pin, INPUT_PULLUP);
+
+  DW1000Ng::initializeNoInterrupt(5, 14);
+  DW1000Ng::applyConfiguration(DEFAULT_CONFIG);
+  DW1000Ng::setNetworkId(10);
+  DW1000Ng::setDeviceAddress(6);
+  DW1000Ng::setAntennaDelay(16436);
+
+  transmitPosition();
+
+/*
+  if (bmp.takeForcedMeasurement()) {
+    altitude = bmp.readAltitude(1013.25);
+    Serial.println(altitude);
+  }
+*/
+
 
   WiFi.begin(SSID, PASSWORD);
   for(int i = 0; i < 10 && WiFi.status() != WL_CONNECTED; i++) {
@@ -223,41 +295,6 @@ void setup() {
   udp.begin(UDP_PORT);
   JsonDocument data;
   sendDataToServer("drone", data);
-
-  Wire.begin(21, 22, 500000);
-  setupMpu6050Registers();
-  calibrateAngleOffsets();
-
-  pinMode(battery_pin, INPUT_PULLUP);
-
-  DW1000Ng::initializeNoInterrupt(5, 14);
-  Serial.println(F("DW1000Ng initialized ..."));
-
-  DW1000Ng::applyConfiguration(DEFAULT_CONFIG);
-
-  DW1000Ng::setNetworkId(10);
-  DW1000Ng::setDeviceAddress(6);
-
-  DW1000Ng::setAntennaDelay(16436);
-  
-  Serial.println(F("Committed configuration ..."));
-  // DEBUG chip info and registers pretty printed
-  char msg[128];
-  DW1000Ng::getPrintableDeviceIdentifier(msg);
-  Serial.print("Device ID: "); Serial.println(msg);
-  DW1000Ng::getPrintableExtendedUniqueIdentifier(msg);
-  Serial.print("Unique ID: "); Serial.println(msg);
-  DW1000Ng::getPrintableNetworkIdAndShortAddress(msg);
-  Serial.print("Network ID & Device Address: "); Serial.println(msg);
-  DW1000Ng::getPrintableDeviceMode(msg);
-  Serial.print("Device mode: "); Serial.println(msg);
-
-  transmit();
-
-  if (bmp.takeForcedMeasurement()) {
-    altitude = bmp.readAltitude(1013.25);
-    Serial.println(altitude);
-  }
 
   myLED.setPixel( 0, L_GREEN, 1 );
 }
@@ -271,21 +308,21 @@ void loop() {
   readGyro();
   readAccelerometer();
 
-  // transmit();
+  // transmitPosition();
   /* Filter the data to reduce noise */
   filterAngle();
 
   /* Receive the remote controller's commands */
-  receiveControl();
+  // receiveControl();
 
   /* Calculate PID */
   calculatePid();
 
   setMotorPids();
 
-  // sendData2();
+  sendData2();
 
-  sendPositionToServer();
+  // sendPositionToServer();
 }
 
 void calculatePid() {
@@ -322,18 +359,10 @@ void calculatePid() {
 }
 
 void setMotorPids() {
-    // motor.rl(72);      // Set PID for front right motor
-    int rl = throttle + pid_current[PITCH] + pid_current[ROLL] + pid_current[YAW];
-    motor.rl(rl > THROTTLE_MINIMUM ? rl : THROTTLE_MINIMUM);      // Set PID for front right motor
-    // motor.lr(throttle);      // Set PID for back left motor
-    int lr = throttle - pid_current[PITCH] - pid_current[ROLL] + pid_current[YAW];
-    motor.lr(lr > THROTTLE_MINIMUM ? lr : THROTTLE_MINIMUM);      // Set PID for back left motor
-    // motor.lf(throttle);      // Set PID for front left motor
-    int lf = throttle + pid_current[PITCH] - pid_current[ROLL] - pid_current[YAW];
-    motor.lf(lf > THROTTLE_MINIMUM ? lf : THROTTLE_MINIMUM);      // Set PID for front left motor
-    // motor.rr(throttle);      // Set PID for back right motor
-    int rr = throttle - pid_current[PITCH] + pid_current[ROLL] - pid_current[YAW];
-    motor.rr(rr > THROTTLE_MINIMUM ? rr : THROTTLE_MINIMUM);      // Set PID for back right motor
+    motor.frontRight(throttle + pid_current[PITCH] + pid_current[ROLL] + pid_current[YAW]);      // Set PID for back left motor
+    motor.frontLeft(throttle + pid_current[PITCH] - pid_current[ROLL] - pid_current[YAW]);      // Set PID for back left motor
+    motor.rearLeft(throttle - pid_current[PITCH] - pid_current[ROLL] + pid_current[YAW]);      // Set PID for back right motor
+    motor.rearRight(throttle - pid_current[PITCH] + pid_current[ROLL] - pid_current[YAW]);      // Set PID for back right motor
 }
 
 void emergencyLanding() {
@@ -437,8 +466,6 @@ void receiveControl() {
   int packetSize = udp.parsePacket();
 
   if (packetSize) {
-    Serial.print(" Received packet from : "); Serial.println(udp.remoteIP());
-    Serial.print(" Size : "); Serial.println(packetSize);
     int len = udp.read(packetBuffer, 255);
     JsonDocument doc;
     DeserializationError error = deserializeJson(doc, packetBuffer);
@@ -456,7 +483,6 @@ void receiveControl() {
     angle_desired[PITCH] = doc["p"];
     angle_desired[ROLL] = doc["r"];
     angle_desired[YAW] = doc["y"];
-
   }
 
 
