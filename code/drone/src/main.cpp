@@ -1,7 +1,8 @@
 #include <Arduino.h>
+#include <ArduinoWebsockets.h>
+using namespace websockets;
+WebsocketsClient client;
 #include <WiFi.h>
-#include <WiFiUdp.h>
-WiFiUDP udp;
 
 #include "config.h"
 #include <SPI.h>
@@ -24,12 +25,12 @@ int DISPLAY_VERSION = 3;                            // Which display should be u
 
 float COMPLEMENTARY_FILTER = 0.80;                   // Complementary filter for combining acc and gyro
 
-double throttle = THROTTLE_MINIMUM + 30;                             // Desired throttle
+double throttle = THROTTLE_MINIMUM + 22;                             // Desired throttle
 float angle_desired[3] = {0.0, 0.0, 0.0};           // Desired angle
 
-float gain_p[3] = {3, 3, 3};                   // Gain proportional
-float gain_i[3] = {0.02, 0.02, 0.02};                        // Gain integral
-float gain_d[3] = {20, 20, 20};                    // Gain derivetive
+float gain_p[3] = {0.8, 0.8, 3};                   // Gain proportional
+float gain_i[3] = {0.13, 0.13, 0.02};                        // Gain integral
+float gain_d[3] = {0.05, 0.05, 0};                    // Gain derivetive
 
 float filter = 0.9;                                 // Complementary filter for pid
 
@@ -52,8 +53,8 @@ float pid_d[3] = {0, 0, 0};                         // PID derivitive error
 float angle_current[3];                             // Angle measured after filtering
 float angle_acc[3];                                 // Angle measured using accelerometer
 float angle_gyro[3];                                // Angle measured using gyro
-float angle_acc_offset[3] = {0.5,0.5,0.5};          // Offsets for gyro angle measurement
-float angle_gyro_offset[3] = {0.5,0.5,0.5};         // Offsets for acc angle measurement
+float angle_acc_offset[3] = {0.0,0.0,0.0};          // Offsets for gyro angle measurement
+float angle_gyro_offset[3] = {0.0,0.0,0.0};         // Offsets for acc angle measurement
 
 float angle_acc_raw[3];                             // Accelerator raw data
 int16_t angle_gyro_raw[3];                          // Gyro raw data
@@ -73,13 +74,15 @@ Adafruit_BMP280 bmp;
 uint32_t altitude_forced = 0;
 uint32_t altitude = 0;
 
+bool dataToSend = false;
+
 #define LEN_DATA 16
 byte data[LEN_DATA];
 uint32_t lastActivity;
 uint32_t resetPeriod = 250;
 uint16_t replyDelayTimeUS = 3000;
 
-#define LED_TYPE        LED_STRIP_WS2812
+#define LED_TYPE LED_STRIP_WS2812
 #define LED_TYPE_IS_RGBW 0
 #define LED_GPIO GPIO_NUM_14
 #define LED_BRIGHT 30
@@ -94,7 +97,7 @@ String uniq = "";
 
 uint8_t battery_pin = 13;
 
-char packetBuffer[2000];
+char packetBuffer[800];
 
 int16_t ax, ay, az,gx, gy, gz;
 
@@ -129,28 +132,37 @@ void transmitPosition() {
 
 int16_t AcX,AcY,AcZ,Tmp,GyX,GyY,GyZ;
 
-int newx;
-int newy;
-int newz;
-double x;
-double y;
-double z;
+int newx, newy, newz;
+double x, y, z;
 
 #define X 0
 #define Y 1
 #define Z 2
 
 void setupMpu6050Registers() {
-  Wire.beginTransmission(MPU_ADDRESS);
-  Wire.write(0x6B);
-  Wire.write(0);
-  Wire.endTransmission(true);
+    // Configure power management
+    Wire.beginTransmission(MPU_ADDRESS); // Start communication with MPU
+    Wire.write(0x6B);                    // Request the PWR_MGMT_1 register
+    Wire.write(0x00);                    // Apply the desired configuration to the register
+    Wire.endTransmission();              // End the transmission
 
-  /* Set gyro's digital low pass filter to ~5Hz */
-  Wire.beginTransmission(MPU_ADDRESS);
-  Wire.write(0x1A);
-  Wire.write(0x06);
-  Wire.endTransmission();
+    // Configure the gyro's sensitivity
+    Wire.beginTransmission(MPU_ADDRESS); // Start communication with MPU
+    Wire.write(0x1B);                    // Request the GYRO_CONFIG register
+    Wire.write(0x08);                    // Apply the desired configuration to the register : ±500°/s
+    Wire.endTransmission();              // End the transmission
+
+    // Configure the acceleromter's sensitivity
+    Wire.beginTransmission(MPU_ADDRESS); // Start communication with MPU
+    Wire.write(0x1C);                    // Request the ACCEL_CONFIG register
+    Wire.write(0x10);                    // Apply the desired configuration to the register : ±8g
+    Wire.endTransmission();              // End the transmission
+
+    // Configure low pass filter
+    Wire.beginTransmission(MPU_ADDRESS); // Start communication with MPU
+    Wire.write(0x1A);                    // Request the CONFIG register
+    Wire.write(0x03);                    // Set Digital Low Pass Filter about ~43Hz
+    Wire.endTransmission();              // End the transmission
 }
 
 void calculatePid();
@@ -166,31 +178,68 @@ void emergencyLanding();
 void sendData1(int);
 void calibrateAngleOffsets();
 
+void onMessageCallback(WebsocketsMessage message) {
+    JsonDocument doc;
+    DeserializationError error = deserializeJson(doc, message.data());
+    if (error) {
+      Serial.print(F("deserializeJson() failed: "));
+      Serial.println(error.f_str());
+      return;
+    }
+
+    if (doc["reboot"]) {
+      ESP.restart();
+    }
+
+    JsonVariant t = doc["t"];
+    throttle = throttle + t.as<int>();
+    angle_desired[PITCH] = doc["p"];
+    angle_desired[ROLL] = doc["r"];
+    angle_desired[YAW] = doc["y"];
+
+    int hasSettings = doc["settings"].size();
+    if (hasSettings) {
+      JsonArray p = doc["settings"]["p"];
+      JsonArray i = doc["settings"]["i"];
+      JsonArray d = doc["settings"]["d"];
+      copyArray(doc["settings"]["p"], pid_p);
+      copyArray(doc["settings"]["i"], pid_i);
+      copyArray(doc["settings"]["d"], pid_d);
+    }
+}
+
+void onEventsCallback(WebsocketsEvent event, String data) {
+    if(event == WebsocketsEvent::ConnectionOpened) {
+        Serial.println("Connnection Opened");
+    } else if(event == WebsocketsEvent::ConnectionClosed) {
+        Serial.println("Connnection Closed");
+    } else if(event == WebsocketsEvent::GotPing) {
+        Serial.println("Got a Ping!");
+    } else if(event == WebsocketsEvent::GotPong) {
+        Serial.println("Got a Pong!");
+    }
+}
+
+
 void sendDataToServer(String type, JsonDocument data) {
   JsonDocument doc;
   doc["uniq"] = uniq;
   doc["type"] = type;
   doc["data"] = data;
-  udp.beginPacket(SERVER_HOST_NAME, UDP_PORT);
-  serializeJson(doc, udp);
-  udp.endPacket();
+  
+  serializeJson(doc, packetBuffer);
+  client.send(packetBuffer);
 }
 
 void sendPositionToServer() {
-  JsonDocument doc;
   JsonDocument position;
-  
-  position["pitch"] = angle_current[PITCH];
-  position["roll"] = angle_current[ROLL];
-  position["yaw"] = angle_current[YAW];
+
+  position["pitch"] = angle_acc[PITCH];
+  position["roll"] = angle_acc[ROLL];
+  position["yaw"] = angle_acc[YAW];
   position["throttle"] = throttle;
 
-  doc["uniq"] = uniq;
-  doc["type"] = "position";
-  doc["data"] = position;
-  udp.beginPacket(SERVER_HOST_NAME, UDP_PORT);
-  serializeJson(doc, udp);
-  udp.endPacket();
+  sendDataToServer("position", position);
 }
 
 #include <ESP32Servo.h>
@@ -242,9 +291,16 @@ void calibMotor() {
 
   delay(30000);
 }
+
+hw_timer_t * timer = NULL;
+
+void IRAM_ATTR timer_isr() {
+    dataToSend = true;
+}
+
 void setup() {
-  WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);  
-  delay(2000);
+  /*
+    delay(2000);
 
   motor.init(THROTTLE_MINIMUM, THROTTLE_MAXIMUM);
 
@@ -252,23 +308,24 @@ void setup() {
 
   motor.arm();
   
-  delay(1000);
-  
-  motor.test();
+  delay(2000);
+  */
+
 
   Serial.begin(115200);
 
   myLED.begin( LED_GPIO, 1 );         // initialze the myLED object. Here we have 1 LED attached to the LED_GPIO pin
   myLED.brightness( LED_BRIGHT );     // set the LED photon intensity level
 
-  getMac();
-
   Wire.begin(21, 22, 400000);
+  delay(400);
   setupMpu6050Registers();
   calibrateAngleOffsets();
 
   pinMode(battery_pin, INPUT_PULLUP);
 
+  getMac();
+/*
   DW1000Ng::initializeNoInterrupt(5, 14);
   DW1000Ng::applyConfiguration(DEFAULT_CONFIG);
   DW1000Ng::setNetworkId(10);
@@ -276,14 +333,7 @@ void setup() {
   DW1000Ng::setAntennaDelay(16436);
 
   transmitPosition();
-
-/*
-  if (bmp.takeForcedMeasurement()) {
-    altitude = bmp.readAltitude(1013.25);
-    Serial.println(altitude);
-  }
-*/
-
+  */
 
   WiFi.begin(SSID, PASSWORD);
   for(int i = 0; i < 10 && WiFi.status() != WL_CONNECTED; i++) {
@@ -292,11 +342,23 @@ void setup() {
       delay(1000);
   }
 
-  udp.begin(UDP_PORT);
+  delay(100);
+
+  client.onMessage(onMessageCallback);
+  client.onEvent(onEventsCallback);
+  client.connect(SERVER_HOST_NAME);
+
+  delay(100);
+
   JsonDocument data;
   sendDataToServer("drone", data);
 
   myLED.setPixel( 0, L_GREEN, 1 );
+
+  timer = timerBegin(0, 80, true);
+  timerAttachInterrupt(timer, &timer_isr, true);
+  timerAlarmWrite(timer, 100 * 1000, true);
+  timerAlarmEnable(timer);
 }
 
 void loop() {
@@ -308,21 +370,21 @@ void loop() {
   readGyro();
   readAccelerometer();
 
-  // transmitPosition();
   /* Filter the data to reduce noise */
   filterAngle();
-
-  /* Receive the remote controller's commands */
-  // receiveControl();
 
   /* Calculate PID */
   calculatePid();
 
   setMotorPids();
 
-  sendData2();
+  client.poll();
 
-  // sendPositionToServer();
+  if (dataToSend) {
+    sendPositionToServer();
+    // sendData2();
+    dataToSend = false;
+  }
 }
 
 void calculatePid() {
@@ -359,10 +421,10 @@ void calculatePid() {
 }
 
 void setMotorPids() {
-    motor.frontRight(throttle + pid_current[PITCH] + pid_current[ROLL] + pid_current[YAW]);      // Set PID for back left motor
-    motor.frontLeft(throttle + pid_current[PITCH] - pid_current[ROLL] - pid_current[YAW]);      // Set PID for back left motor
-    motor.rearLeft(throttle - pid_current[PITCH] - pid_current[ROLL] + pid_current[YAW]);      // Set PID for back right motor
-    motor.rearRight(throttle - pid_current[PITCH] + pid_current[ROLL] - pid_current[YAW]);      // Set PID for back right motor
+    motor.frontRight(throttle + pid_current[PITCH] - pid_current[ROLL] - pid_current[YAW]);      // Set PID for back left motor
+    motor.rearRight(throttle - pid_current[PITCH] - pid_current[ROLL] + pid_current[YAW]);      // Set PID for back right motor
+    motor.rearLeft(throttle - pid_current[PITCH] + pid_current[ROLL] - pid_current[YAW]);      // Set PID for back right motor
+    motor.frontLeft(throttle + pid_current[PITCH] + pid_current[ROLL] + pid_current[YAW]);      // Set PID for back left motor
 }
 
 void emergencyLanding() {
@@ -459,118 +521,6 @@ void calibrateAngleOffsets() {
   angle_acc_offset[PITCH] = acc_avg[PITCH] / num;
   angle_acc_offset[ROLL] = acc_avg[ROLL] / num;
   angle_acc_offset[YAW] = acc_avg[YAW] / num;
-}
-
-void receiveControl() {
-
-  int packetSize = udp.parsePacket();
-
-  if (packetSize) {
-    int len = udp.read(packetBuffer, 255);
-    JsonDocument doc;
-    DeserializationError error = deserializeJson(doc, packetBuffer);
-    if (error) {
-      Serial.print(F("deserializeJson() failed: "));
-      Serial.println(error.f_str());
-      return;
-    }
-
-    if (doc["reboot"]) {
-      ESP.restart();
-    }
-
-    throttle = doc["t"];
-    angle_desired[PITCH] = doc["p"];
-    angle_desired[ROLL] = doc["r"];
-    angle_desired[YAW] = doc["y"];
-  }
-
-
-
-/*
-  if(Serial.available()) {
-    // Read until end of command
-    String command = Serial.readStringUntil(';');
-
-    if(command[0] == '.') {
-      // Receive direct value command
-
-      if(command[1] == 't') {
-        throttle = command.substring(2).toInt();                    // Set throttle to value
-      } else if(command[1] == 'p') {
-        angle_desired[PITCH] = command.substring(2).toFloat();      // Set desired PITCH
-      } else if(command[1] == 'r') {
-        angle_desired[ROLL] = command.substring(2).toFloat();       // Set Desired ROLL
-      } else if(command[1] == 'y') {
-        angle_desired[YAW] = command.substring(2).toFloat();        // Set desired YAW
-      }
-
-      lastCommand = millis();
-    } else {
-      // Receive increase/decrease command
-
-      if(command == "throttle+") {
-        throttle += 50;                                             // Increase throttle
-
-        if(throttle >= THROTTLE_MAXIMUM) {
-          throttle = THROTTLE_MAXIMUM;
-        }
-      } else if(command == "throttle-") {
-        throttle -= 50;                                             // Decrease throttle
-
-        if(throttle <= THROTTLE_MINIMUM) {
-          throttle = THROTTLE_MINIMUM;
-        }
-      } else if(command == "stop") {
-        throttle = THROTTLE_MINIMUM;                                // Turn off all motors
-      } else if(command == "calibrateAngles") {
-        calibrateAngleOffsets();                                    // Calibrate gyro and accelerometer offsets
-      } else if(command == "gainP+") {
-        gain_p[PITCH] = gain_p[PITCH] + 0.1;                        // Increase P gain for pitch
-        gain_p[ROLL] = gain_p[ROLL] + 0.1;                          // Increase P gain for roll
-      } else if(command == "gainP-") {
-        gain_p[PITCH] = gain_p[PITCH] - 0.1;                        // Decrease P gain for pitch
-        gain_p[ROLL] = gain_p[ROLL] - 0.1;                          // Decrease P gain for roll
-      } else if(command == "gainD+") {
-        gain_d[PITCH] = gain_d[PITCH] + 0.05;                       // Increase D gain for pitch
-        gain_d[ROLL] = gain_d[ROLL] + 0.05;                         // Increase D gain for roll
-      } else if(command == "gainD-") {
-        gain_d[PITCH] = gain_d[PITCH] - 0.05;                       // Decrease D gain for pitch
-        gain_d[ROLL] = gain_d[ROLL] - 0.05;                         // Decrease D gain for roll
-      } else if(command == "right") {
-        angle_desired[ROLL] = angle_desired[ROLL] + 2;              // Move right
-      } else if(command == "left") {
-        angle_desired[ROLL] = angle_desired[ROLL] - 2;              // Move left
-      } else if(command == "filter+") {
-        filter = filter + 0.005;                                    // Increase complementary filter
-      } else if(command == "filter-") {
-        filter = filter - 0.005;                                    // Decrease complementary filter
-      } else if(command == "mode0") {
-        mode = 0;                                                   // Activate all motors
-      } else if(command == "mode1") {
-        mode = 1;                                                   // Activate motor 1 & 3
-      } else if(command == "mode2") {
-        mode = 2;                                                   // Activate motor 2 & 4
-      }
-    }
-  }
-*/
-}
-
-void sendData1(int angleType) {
-  Serial.println("B1" + 
-    String(throttle) + "|" + 
-    String(angle_current[angleType]) + "|" + 
-    String(angle_desired[angleType]) + "|" + 
-    String(pid_current[angleType]) + "|" + 
-    String(pid_p[angleType]) + "|" + 
-    String(pid_d[angleType]) + "|" + 
-    String(gain_p[angleType]) + "|" + 
-    String(gain_d[angleType], 3) + "|" + 
-    String(time_elapsed, 6) + "|" + 
-    String(filter, 3) + "|" + 
-    String(angle_gyro[angleType], 6) + "|" + 
-    String(angle_acc[angleType], 6));
 }
 
 void sendData2() {
