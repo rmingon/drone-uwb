@@ -1,8 +1,8 @@
 #include "Motor.h"
 
 #define PIN_FRONT_RIGHT 27 // OK
-#define PIN_REAR_RIGHT 26 // OK
-#define PIN_REAR_LEFT 25 // 
+#define PIN_REAR_RIGHT 25 // OK
+#define PIN_REAR_LEFT 26 // 
 #define PIN_FRONT_LEFT 32 // 32
 
 Motor::Motor() {
@@ -54,19 +54,23 @@ void Motor::back(uint8_t pwm) {
 }
 
 void Motor::frontRight(uint8_t pwm) {
-  ledcWrite(0, pwm < min_throttle ? min_throttle : pwm );
+  int mapped = map(min_throttle, max_throttle, -300, 300, pwm);
+  ledcWrite(0, mapped < min_throttle ? min_throttle : mapped );
 }
 
 void Motor::rearRight(uint8_t pwm) {
-  ledcWrite(2, pwm < min_throttle ? min_throttle : pwm );
+  int mapped = map(min_throttle, max_throttle, -300, 300, pwm);
+  ledcWrite(1, mapped < min_throttle ? min_throttle : mapped );
 }
 
 void Motor::rearLeft(uint8_t pwm) {
-  ledcWrite(1, pwm < min_throttle ? min_throttle : pwm );
+  int mapped = map(min_throttle, max_throttle, -300, 300, pwm);
+  ledcWrite(2, mapped < min_throttle ? min_throttle : mapped );
 }
 
 void Motor::frontLeft(uint8_t pwm) {
-  ledcWrite(3, pwm < min_throttle ? min_throttle : pwm );
+  int mapped = map(min_throttle, max_throttle, -300, 300, pwm);
+  ledcWrite(3, mapped < min_throttle ? min_throttle : mapped );
 }
 
 void Motor::rlSetOffset(uint8_t pwm) {
@@ -107,15 +111,17 @@ void Motor::test() {
   frontLeft(min_throttle+10);
   delay(1000);
   frontLeft(min_throttle);
+
+  frontRight(min_throttle+10);
+  delay(1000);
+  frontRight(min_throttle);  
+  delay(1000);
   rearRight(min_throttle+10);
   delay(1000);
   rearRight(min_throttle);
   rearLeft(min_throttle+10);
   delay(1000);
   rearLeft(min_throttle);
-  frontRight(min_throttle+10);
-  delay(1000);
-  frontRight(min_throttle);
   delay(1000);
 }
 
