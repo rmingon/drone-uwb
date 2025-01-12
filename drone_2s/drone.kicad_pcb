@@ -1635,7 +1635,7 @@
 		(descr "Capacitor SMD 0603 (1608 Metric), square (rectangular) end terminal, IPC_7351 nominal, (Body size source: IPC-SM-782 page 76, https://www.pcb-3d.com/wordpress/wp-content/uploads/ipc-sm-782a_amendment_1_and_2.pdf), generated with kicad-footprint-generator")
 		(tags "capacitor")
 		(property "Reference" "C4"
-			(at 0 -1.43 360)
+			(at 0 -1.43 0)
 			(layer "F.SilkS")
 			(uuid "a826a230-5b92-4db6-8def-09ab2f0e6f21")
 			(effects
@@ -1646,7 +1646,7 @@
 			)
 		)
 		(property "Value" "C"
-			(at 0 1.43 360)
+			(at 0 1.43 0)
 			(layer "F.Fab")
 			(uuid "efb11e06-2a52-480a-8355-acc765c714ff")
 			(effects
@@ -1801,7 +1801,7 @@
 			(uuid "b89a87a5-4466-41f9-b320-d839ca9c505e")
 		)
 		(fp_text user "${REFERENCE}"
-			(at 0 0 360)
+			(at 0 0 0)
 			(layer "F.Fab")
 			(uuid "6a49693a-52de-434d-9461-1ce129c70f3a")
 			(effects
@@ -8640,7 +8640,7 @@
 		(descr "Connector XT30 Vertical Cable Female, https://www.tme.eu/en/Document/3cbfa5cfa544d79584972dd5234a409e/XT30U%20SPEC.pdf")
 		(tags "RC Connector XT30")
 		(property "Reference" "J2"
-			(at 2.5 -4 360)
+			(at 2.5 -4 0)
 			(layer "F.SilkS")
 			(uuid "55469a75-6635-4b2d-b349-0edfb6f68863")
 			(effects
@@ -8651,7 +8651,7 @@
 			)
 		)
 		(property "Value" "Conn_01x02"
-			(at 2.5 4 360)
+			(at 2.5 4 0)
 			(layer "F.Fab")
 			(uuid "25c43ce6-994b-4f9e-873a-d9148cd98747")
 			(effects
@@ -8886,7 +8886,7 @@
 			(uuid "299bb2b7-b333-413b-b032-1e741fbc5c1f")
 		)
 		(fp_text user "-"
-			(at -4 0 360)
+			(at -4 0 0)
 			(layer "F.SilkS")
 			(uuid "cc645e0f-fc11-48dd-96d5-071385a9e227")
 			(effects
@@ -8897,7 +8897,7 @@
 			)
 		)
 		(fp_text user "+"
-			(at 9 0 360)
+			(at 9 0 0)
 			(layer "F.SilkS")
 			(uuid "f9138ac4-3ad5-4ca0-a49f-2b18eebb33fe")
 			(effects
@@ -8908,7 +8908,7 @@
 			)
 		)
 		(fp_text user "${REFERENCE}"
-			(at 2.5 0 360)
+			(at 2.5 0 0)
 			(layer "F.Fab")
 			(uuid "2b04d627-c756-41fc-b99f-fee8ad0bc590")
 			(effects
@@ -13902,7 +13902,7 @@
 		(uuid "7c4afd15-4905-4fee-9b6a-861c166754f6")
 	)
 	(via
-		(at 111.76 123.19)
+		(at 108 123.19)
 		(size 0.8)
 		(drill 0.4)
 		(layers "F.Cu" "B.Cu")
