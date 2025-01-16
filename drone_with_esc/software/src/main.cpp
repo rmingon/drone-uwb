@@ -109,10 +109,8 @@ float elapsedTime; // in seconds
 
 MPU6050 mpu;  
 
-
 int16_t ax, ay, az;
 int16_t gx, gy, gz;
-
 
 float accRoll  = 0.0f;
 float accPitch = 0.0f;
@@ -168,7 +166,6 @@ void loop() {
   // For yaw, typically you'd rely on a magnetometer or at least a drift compensation technique
   currentYaw   = getKalmanAngle(kalmanYaw,   accYaw,   gyroYawRate,   elapsedTime);
 
-  // 4. PID
   errorRoll  = rollSetpoint  - currentRoll;
   errorPitch = pitchSetpoint - currentPitch;
   errorYaw   = yawSetpoint   - currentYaw;
