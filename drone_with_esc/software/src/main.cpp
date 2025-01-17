@@ -5,10 +5,10 @@
 #include <ArduinoJson.h>
 #include "secrets.h"
 
-const unsigned int UDP_PORT = 1234; // port to listen on
+const unsigned int UDP_PORT = 1234;
 
-WiFiUDP udp;                       // UDP instance
-char incomingPacket[512];          // buffer to hold incoming packet data
+WiFiUDP udp;
+char incomingPacket[512];
 
 struct Kalman {
   float Q_angle;    // Process noise variance for angle
@@ -308,7 +308,6 @@ void handleUDP() {
     StaticJsonDocument<256> doc;
     DeserializationError error = deserializeJson(doc, incomingPacket);
     if (!error) {
-      // For each possible field, update if present
       if (doc.containsKey("Kp_roll"))   Kp_roll   = doc["Kp_roll"].as<float>();
       if (doc.containsKey("Ki_roll"))   Ki_roll   = doc["Ki_roll"].as<float>();
       if (doc.containsKey("Kd_roll"))   Kd_roll   = doc["Kd_roll"].as<float>();
