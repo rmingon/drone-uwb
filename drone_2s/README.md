@@ -4,4 +4,4 @@
 
 ![3d](./3d.png)
 ![schematic](./pcb.png)
-![schematic](./schematic_pcb.png)
+![schematic](./schematic.png)
