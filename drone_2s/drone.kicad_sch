@@ -7939,6 +7939,28 @@
 			)
 		)
 	)
+	(global_label "ESP_RX"
+		(shape input)
+		(at 95.25 215.9 0)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "25bae79c-ca4e-4808-ade0-9ba583623f86")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 104.7388 215.8206 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+				(hide yes)
+			)
+		)
+	)
 	(global_label "DW_IRQ"
 		(shape input)
 		(at 124.46 43.18 180)
@@ -8621,28 +8643,6 @@
 			)
 		)
 	)
-	(global_label "RX-PROG"
-		(shape input)
-		(at 95.25 218.44 0)
-		(fields_autoplaced yes)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify left)
-		)
-		(uuid "71c7cbcd-3595-4973-addd-3b8010c0a956")
-		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 106.8555 218.3606 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-				(hide yes)
-			)
-		)
-	)
 	(global_label "DW_RST"
 		(shape input)
 		(at 76.2 151.13 0)
@@ -8683,6 +8683,28 @@
 					(size 1.27 1.27)
 				)
 				(justify right)
+				(hide yes)
+			)
+		)
+	)
+	(global_label "ESP_TX"
+		(shape input)
+		(at 95.25 218.44 0)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "73a803b8-6ec0-49c7-b4d1-70b938be530e")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 104.4364 218.3606 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
 				(hide yes)
 			)
 		)
@@ -9079,28 +9101,6 @@
 					(size 1.27 1.27)
 				)
 				(justify right)
-				(hide yes)
-			)
-		)
-	)
-	(global_label "TX-PROG"
-		(shape input)
-		(at 95.25 215.9 0)
-		(fields_autoplaced yes)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify left)
-		)
-		(uuid "c2c36d49-e7a8-451b-8105-d610c20e1602")
-		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 106.5531 215.8206 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
 				(hide yes)
 			)
 		)
