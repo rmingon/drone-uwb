@@ -1,27 +1,39 @@
-<script setup>
-import { ref, onMounted, toRef, shallowRef } from 'vue'
-import { TresCanvas, useLoop } from '@tresjs/core'
-import { useGlobalState } from './stores/data';
+<script setup lang="ts">
+import { onMounted } from 'vue'
+import NetworkScene from './components/NetworkScene.vue'
+import StatusPanel from './components/StatusPanel.vue'
+import { networkState, serverAddress, startNetworkState } from './stores/state'
 
-import Drone from './Drone.vue'
-
-const data = useGlobalState()
-
-const drones = toRef(data, 'drones')
-const dronesPosition = toRef(data, 'dronesPosition')
-
+onMounted(startNetworkState)
 </script>
 
 <template>
-  <div v-for="drone in drones" class="border-2 border-radius w-1/2 p-4 m-2 flex flex-col">
-    <p class="w-full text-center">{{ drone.id }}</p>
-    <p class="w-full text-center">{{ dronesPosition[drone.id] }}</p>
-    <div class="w-full h-52">
-      <TresCanvas render-mode="manual"> 
-        <Drone :position="dronesPosition[drone.id]"/>
-      </TresCanvas>
-    </div>
+  <div class="flex h-screen w-screen overflow-hidden bg-slate-950">
+    <main class="relative h-full min-w-0 flex-1">
+      <NetworkScene :snapshot="networkState.snapshot" />
 
+      <div
+        v-if="!networkState.snapshot"
+        class="pointer-events-none absolute inset-0 flex items-center justify-center"
+      >
+        <div class="pointer-events-auto rounded-xl border border-slate-800 bg-slate-900/90 px-6 py-5 text-center">
+          <p class="text-sm text-slate-300">Waiting for the server</p>
+          <p class="mt-1 font-mono text-xs text-slate-500">{{ serverAddress() }}</p>
+          <a
+            href="?demo=1"
+            class="mt-3 inline-block rounded-md bg-cyan-500/15 px-3 py-1.5 text-xs font-medium text-cyan-300 hover:bg-cyan-500/25"
+          >
+            look at it with generated data
+          </a>
+        </div>
+      </div>
+    </main>
+
+    <StatusPanel
+      :snapshot="networkState.snapshot"
+      :connected="networkState.connected"
+      :demo="networkState.demo"
+      :server-url="serverAddress()"
+    />
   </div>
 </template>
-
