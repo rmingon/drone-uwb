@@ -9,3 +9,6 @@
 .idea
 
 */**/fp-info-cache
+*-backups/
+
+.DS_Store
