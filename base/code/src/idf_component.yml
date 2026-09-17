@@ -1,0 +1,5 @@
+dependencies:
+  # cJSON is no longer part of ESP-IDF core since v6, it replaces ArduinoJson here
+  espressif/cjson: "^1.7.18"
+  idf:
+    version: ">=5.0"
