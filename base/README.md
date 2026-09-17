@@ -1,6 +1,6 @@
 ## BASE
 
-##### This base use Arduino code for know distance between EACH drone and himself
+##### This base use ESP-IDF code for know distance between EACH drone and himself
 
 #### REAL VIEW
 

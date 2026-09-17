@@ -4,3 +4,11 @@
 .vscode/launch.json
 .vscode/ipch
 src/config.h
+
+# ESP-IDF
+build/
+sdkconfig
+sdkconfig.*
+!sdkconfig.defaults
+managed_components/
+dependencies.lock

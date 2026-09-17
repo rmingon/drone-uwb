@@ -1,0 +1,17 @@
+# PlatformIO flattens ESP-IDF's per-language compiler options into a single
+# list when it builds src/, so GCC 15 sees -Wno-old-style-declaration on the C++
+# front end and -fuse-cxa-atexit on the C one. Both are warnings; this turns
+# ESP-IDF's blanket -Werror into -Werror=all so they stay warnings.
+CONFIG_COMPILER_DISABLE_DEFAULT_ERRORS=y
+
+# 1 kHz tick, so short delays in the DW1000 start-up sequence keep their
+# resolution (the Arduino core ran at 1 kHz too)
+CONFIG_FREERTOS_HZ=1000
+
+CONFIG_ESP_MAIN_TASK_STACK_SIZE=8192
+
+# esp32dev carries 4MB, the ESP-IDF default assumes 2MB
+CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y
+
+CONFIG_ESP_CONSOLE_UART_BAUDRATE=115200
+CONFIG_LOG_DEFAULT_LEVEL_INFO=y
