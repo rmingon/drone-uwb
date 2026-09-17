@@ -6,9 +6,10 @@
 src/config.h
 
 # ESP-IDF
+# sdkconfig is generated from sdkconfig.defaults, and managed_components is
+# downloaded from dependencies.lock, which is tracked so the versions are pinned
 build/
 sdkconfig
 sdkconfig.*
 !sdkconfig.defaults
 managed_components/
-dependencies.lock
