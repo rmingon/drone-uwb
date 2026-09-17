@@ -1,33 +1,61 @@
-import type { AnchorRange } from ".";
-import { getAnchorRanging, setAnchorRanging } from "./ranging";
+import type { AnchorRange, AnchorTag } from ".";
+import { registerTagAddress, resolveTagAddress, setRange } from "./ranging";
+
+const UDP_PORT = 7051;
 
 const client = await Bun.udpSocket({});
 
 export class Anchor {
-    id: string;
-    ip: string;
+  id: string;
+  ip: string;
+  address: number;
+  main: boolean;
 
-    constructor(id: string, ip: string) {
-        this.id = id.slice(0, 12)
-        this.ip = ip
-        console.log(ip)
+  constructor(id: string, ip: string, address = 0, main = false) {
+    this.id = id;
+    this.ip = ip;
+    this.address = address;
+    this.main = main;
+  }
+
+  reboot() {
+    this.udpSend({ reboot: true });
+  }
+
+  /**
+   * Antenna delay is the dominant constant error in a two way ranging setup,
+   * roughly 4.7 mm per unit. The anchor keeps the value in NVS.
+   */
+  setAntennaDelay(antennaDelay: number) {
+    this.udpSend({ antenna_delay: antennaDelay });
+  }
+
+  /** Main anchor only: it just handed `address` to the tag with this EUI. */
+  registerTag({ eui, address }: AnchorTag) {
+    registerTagAddress(address, eui);
+  }
+
+  setRange(range: AnchorRange) {
+    const tag = resolveTagAddress(range.address);
+    if (!tag) {
+      // the main anchor has not announced this address yet, nothing to attach
+      // the measurement to
+      return;
     }
 
-    reboot() {
-        this.udpSend({reboot: true})
-    }
+    setRange({
+      anchor: this.id,
+      tag,
+      distance: range.range,
+      rawDistance: range.raw_range,
+      rxPower: range.rx_power,
+      fpPower: range.fp_power,
+      los: range.los,
+      at: Date.now(),
+    });
+  }
 
-    setRange({uniq, quality, power}: AnchorRange) {
-        if (uniq[0] === "A") // ANCHOR
-            setAnchorRanging(this.id, uniq.slice(1, 13), quality)
-        if (uniq[0] === "D") // DRONE
-            setAnchorRanging(this.id, uniq.slice(1, 13), quality)
-        console.log(uniq)
-        getAnchorRanging(this.id, uniq)
-    }
-
-    udpSend(data: {}) {
-        client.send(JSON.stringify(data), 7051, this.ip);
-    }
-
+  udpSend(data: {}) {
+    client.send(JSON.stringify(data), UDP_PORT, this.ip);
+  }
 }
