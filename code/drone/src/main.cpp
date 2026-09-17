@@ -11,10 +11,7 @@ WebsocketsClient client;
 #include <Adafruit_BMP280.h>
 #include "soc/soc.h"
 #include "soc/rtc_cntl_reg.h"
-#include <DW1000Ng.hpp>
-#include <DW1000NgUtils.hpp>
-#include <DW1000NgRanging.hpp>
-#include <DW1000NgRTLS.hpp>
+#include "uwb_tag.h"
 #include "Motor.h"
 
 #include <ArduinoJson.h>
@@ -94,6 +91,7 @@ static const crgb_t L_WHITE = 0xe0e0e0;
 LiteLED myLED( LED_TYPE, LED_TYPE_IS_RGBW );
 
 String uniq = "";
+uint8_t macBytes[6];
 
 uint8_t battery_pin = 13;
 
@@ -104,30 +102,9 @@ int16_t ax, ay, az,gx, gy, gz;
 int mean_ax,mean_ay,mean_az,mean_gx,mean_gy,mean_gz,state=0;
 int ax_offset,ay_offset,az_offset,gx_offset,gy_offset,gz_offset;
 
-device_configuration_t DEFAULT_CONFIG = {
-    false,
-    true,
-    true,
-    true,
-    false,
-    SFDMode::STANDARD_SFD,
-    Channel::CHANNEL_5,
-    DataRate::RATE_850KBPS,
-    PulseFrequency::FREQ_16MHZ,
-    PreambleLength::LEN_256,
-    PreambleCode::CODE_3
-};
-
 void getMac() {
-  byte mac[6];
-  WiFi.macAddress(mac);
-  uniq = String(mac[0],HEX) +String(mac[1],HEX) +String(mac[2],HEX) +String(mac[3],HEX) + String(mac[4],HEX) + String(mac[5],HEX);
-}
-
-void transmitPosition() {
-  DW1000Ng::setTransmitData(uniq);
-  DW1000Ng::startTransmit(TransmitMode::IMMEDIATE);
-  DW1000Ng::clearTransmitStatus();
+  WiFi.macAddress(macBytes);
+  uniq = String(macBytes[0],HEX) +String(macBytes[1],HEX) +String(macBytes[2],HEX) +String(macBytes[3],HEX) + String(macBytes[4],HEX) + String(macBytes[5],HEX);
 }
 
 int16_t AcX,AcY,AcZ,Tmp,GyX,GyY,GyZ;
@@ -325,15 +302,10 @@ void setup() {
   pinMode(battery_pin, INPUT_PULLUP);
 
   getMac();
-/*
-  DW1000Ng::initializeNoInterrupt(5, 14);
-  DW1000Ng::applyConfiguration(DEFAULT_CONFIG);
-  DW1000Ng::setNetworkId(10);
-  DW1000Ng::setDeviceAddress(6);
-  DW1000Ng::setAntennaDelay(16436);
 
-  transmitPosition();
-  */
+  /* Two way ranging against the anchors, on its own task. The anchors compute
+     the distance and report it, the drone only takes part in the exchange. */
+  uwbTagBegin(macBytes);
 
   WiFi.begin(SSID, PASSWORD);
   for(int i = 0; i < 10 && WiFi.status() != WL_CONNECTED; i++) {
@@ -351,6 +323,8 @@ void setup() {
   delay(100);
 
   JsonDocument data;
+  /* the anchors report ranges under this EUI, it is what ties them to us */
+  data["eui"] = uwbTagEui();
   sendDataToServer("drone", data);
 
   myLED.setPixel( 0, L_GREEN, 1 );
