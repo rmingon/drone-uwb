@@ -1,4 +1,5 @@
 import type { AnchorRange, AnchorTag } from ".";
+import { getAnchor, setPeerLink } from "./network";
 import { registerTagAddress, resolveTagAddress, setRange } from "./ranging";
 
 const UDP_PORT = 7051;
@@ -53,6 +54,13 @@ export class Anchor {
       los: range.los,
       at: Date.now(),
     });
+  }
+
+  /** One leg of the self survey, measured by this anchor against a peer. */
+  setPeerRange(range: AnchorRange) {
+    const self = getAnchor(this.id);
+    if (!self) return;
+    setPeerLink(self.address, range.address, range.range, range.los);
   }
 
   udpSend(data: {}) {

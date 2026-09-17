@@ -32,6 +32,9 @@ export const registerTagAddress = (address: number, eui: string) => {
 
 export const resolveTagAddress = (address: number) => tagAddresses.get(address);
 
+/** Every tag an anchor has announced, which is who the ranging data is about. */
+export const getKnownTags = () => [...new Set(tagAddresses.values())];
+
 export const setRange = (sample: RangeSample) => {
   samples.set(key(sample.anchor, sample.tag), sample);
 };

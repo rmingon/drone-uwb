@@ -1,7 +1,8 @@
-import { filter, interval, Subject } from "rxjs";
+import { filter, merge, Subject } from "rxjs";
 import { Anchor } from "./anchor";
 import { Drone } from "./drone";
-import { getUsableRanges } from "./ranging";
+import { registerAnchor, touchAnchor } from "./network";
+import { $wsIncoming, wsPort } from "./ws";
 
 export interface DronePosition {
   pitch: string;
@@ -47,18 +48,25 @@ interface Data<T> {
   ip: string
 }
 
-const listener = new Subject<Data<DataType>>();
+const udp = new Subject<Data<DataType>>();
 
 await Bun.udpSocket({
   port: 7051,
   socket: {
     data(_socket, buf, _port, addr) {
-      const data : Data<DataType> = JSON.parse(buf.toString())
-      data.ip = addr
-      listener.next(data);
+      try {
+        const data : Data<DataType> = JSON.parse(buf.toString())
+        data.ip = addr
+        udp.next(data);
+      } catch {
+        // a malformed datagram should not take the server down
+      }
     }
   }
 })
+
+/* Anchors speak UDP, drones speak websocket, both send the same envelope. */
+const listener = merge(udp, $wsIncoming)
 
 /* Narrows the shared stream down to one message type. */
 const ofType = <T extends DataType>(type: string) =>
@@ -68,6 +76,7 @@ const $anchorConnection = listener.pipe(ofType<AnchorConnection>("anchor"))
 const $droneConnection = listener.pipe(ofType<DroneConnection>("drone"))
 const $anchorTag = listener.pipe(ofType<AnchorTag>("tag"))
 const $anchorRange = listener.pipe(ofType<AnchorRange>("range"))
+const $anchorPeer = listener.pipe(ofType<AnchorRange>("peer"))
 const $dronePosition = listener.pipe(ofType<DronePosition>("position"))
 
 const anchors = new Map<string, Anchor>()
@@ -77,8 +86,11 @@ const drones = new Map<string, Drone>()
 const dronesByEui = new Map<string, Drone>()
 
 $anchorConnection.subscribe(({uniq, ip, data}) => {
-  anchors.set(uniq, new Anchor(uniq, ip, data?.address, data?.main))
-  console.log(`anchors ${anchors.size}`)
+  const address = data?.address ?? 0
+  const main = data?.main ?? false
+  anchors.set(uniq, new Anchor(uniq, ip, address, main))
+  registerAnchor({id: uniq, ip, address, main})
+  console.log(`anchor ${uniq} is address ${address}${main ? " (main)" : ""}, ${anchors.size} known`)
 })
 
 $anchorTag.subscribe(({uniq, data}) => {
@@ -89,8 +101,17 @@ $anchorTag.subscribe(({uniq, data}) => {
 
 $anchorRange.subscribe(({uniq, data}) => {
   const anchor = anchors.get(uniq)
-  if (anchor)
-    anchor.setRange(data)
+  if (!anchor) return
+  touchAnchor(uniq)
+  anchor.setRange(data)
+})
+
+/* A distance to another anchor describes the installation, not a drone. */
+$anchorPeer.subscribe(({uniq, data}) => {
+  const anchor = anchors.get(uniq)
+  if (!anchor) return
+  touchAnchor(uniq)
+  anchor.setPeerRange(data)
 })
 
 $droneConnection.subscribe(({uniq, ip, data}) => {
@@ -107,19 +128,6 @@ $dronePosition.subscribe((position) => {
     drone.setPosition(position.data)
 })
 
-/* A position needs at least three clear line of sight distances. Until the
-   anchor coordinates are known, just report what we have. */
-interval(1000).subscribe(() => {
-  for (const [eui, drone] of dronesByEui) {
-    const ranges = getUsableRanges(eui)
-    if (ranges.length === 0) continue
-    console.log(
-      `${drone.id}: ` +
-      ranges.map(r => `${r.anchor}=${r.distance.toFixed(2)}m`).join(" ")
-    )
-  }
-})
-
 export { anchors, drones, dronesByEui }
 
-console.log("GO")
+console.log(`listening for anchors on udp 7051, serving the interface on ws ${wsPort}`)
