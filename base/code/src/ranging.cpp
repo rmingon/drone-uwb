@@ -5,6 +5,7 @@
 
 #include "esp_log.h"
 #include "esp_mac.h"
+#include "esp_timer.h"
 
 #include <DW1000Ng.hpp>
 #include <DW1000NgRTLS.hpp>
@@ -210,6 +211,44 @@ void ranging_init(uint16_t antenna_delay)
 #endif
 }
 
+/* ---------------------------------------------------------- self survey -- */
+
+static const uint16_t s_peers[] = ANCHOR_PEERS;
+static const size_t s_peer_count = sizeof(s_peers) / sizeof(s_peers[0]);
+static size_t s_next_peer = 0;
+static int64_t s_next_survey_us = 0;
+
+/**
+ * Plays tag towards one peer. The peer is the one that computes and reports the
+ * distance, so there is nothing to return: this side only pays the air time.
+ */
+static void survey_next_peer(void)
+{
+    const uint16_t peer = s_peers[s_next_peer];
+    s_next_peer = (s_next_peer + 1) % s_peer_count;
+
+    const RangeResult result = DW1000NgRTLS::tagRangeSingle(peer, UWB_FINAL_MESSAGE_DELAY_US);
+    if (!result.success) {
+        ESP_LOGD(TAG, "anchor %u did not answer the survey", peer);
+    }
+    /* result.next points further down the chain; ignore it, the peer list says
+       who to talk to. */
+}
+
+static bool survey_due(void)
+{
+    if (s_peer_count == 0) {
+        return false;
+    }
+    const int64_t now = esp_timer_get_time();
+    if (now < s_next_survey_us) {
+        return false;
+    }
+    /* spread the peers over the period so a full round takes one period */
+    s_next_survey_us = now + (int64_t)ANCHOR_SURVEY_PERIOD_MS * 1000 / (int64_t)s_peer_count;
+    return true;
+}
+
 /* ------------------------------------------------------------------ poll -- */
 
 /**
@@ -232,6 +271,9 @@ static bool publish(const RangeAcceptResult &result, ranging_measure_t *out)
     }
 
     out->tag_address = result.tag_address;
+    /* Short addresses below RANGING_FIRST_TAG_ADDRESS belong to anchors, so a
+       measurement against one of those is a self survey leg. */
+    out->is_anchor = result.tag_address < RANGING_FIRST_TAG_ADDRESS;
     out->raw_range = result.range;
     out->range = filter_push(result.tag_address, result.range);
     out->rx_power = DW1000Ng::getReceivePower();
@@ -244,6 +286,11 @@ static bool publish(const RangeAcceptResult &result, ranging_measure_t *out)
 
 bool ranging_poll(ranging_measure_t *out)
 {
+    if (survey_due()) {
+        survey_next_peer();
+        return false;
+    }
+
 #if ANCHOR_IS_MAIN
     /* The main anchor is the one tags blink at. It answers with the short
        address the tag will use for the rest of the chain. */
@@ -259,7 +306,14 @@ bool ranging_poll(ranging_measure_t *out)
     DW1000Ng::getReceivedData(frame, len);
 
     if (frame[0] != BLINK) {
-        return false; /* range reports from other anchors, not our business */
+        /* A poll outside the blink flow comes from a peer anchor running its
+           own survey. Answer it, nobody else will. */
+        if (frame[9] == RANGING_TAG_POLL) {
+            return publish(DW1000NgRTLS::anchorCompletePoll(frame, len, NextActivity::ACTIVITY_FINISHED,
+                                                            TAG_BLINK_RATE_MS),
+                           out);
+        }
+        return false;
     }
 
     const uint16_t address = assign_short_address(&frame[2]);

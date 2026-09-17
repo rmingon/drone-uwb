@@ -35,6 +35,18 @@
 /* How often a tag restarts the cycle, in ms. Sent by the last anchor. */
 #define TAG_BLINK_RATE_MS 200
 
+/* Self survey: the other anchors this one measures its distance to. Each entry
+ * is a peer ANCHOR_ADDRESS. The measurement is computed and reported by the
+ * peer, not by this board, so list every peer on every board to get the full
+ * matrix. Leave empty with {} to turn the survey off.
+ *
+ * It is what gives the anchors their coordinates: with the distances between
+ * them the server can lay the network out without anyone measuring a room. */
+#define ANCHOR_PEERS {2, 3}
+
+/* One full round over ANCHOR_PEERS takes this long. */
+#define ANCHOR_SURVEY_PERIOD_MS 5000
+
 /* Tags tracked at once, and the first short address handed out. */
 #define RANGING_MAX_TAGS          4
 #define RANGING_FIRST_TAG_ADDRESS 5

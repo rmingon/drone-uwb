@@ -175,7 +175,7 @@ namespace DW1000NgRTLS {
         return { true, static_cast<uint16_t>(DW1000NgUtils::bytesAsValue(&init_recv[13], 2)) };
     }
 
-    static RangeResult tagFinishRange(uint16_t anchor, uint16_t replyDelayUs) {
+    RangeResult tagRangeSingle(uint16_t anchor, uint16_t replyDelayUs) {
         RangeResult returnValue;
 
         byte target_anchor[2];
@@ -229,7 +229,7 @@ namespace DW1000NgRTLS {
     RangeInfrastructureResult tagRangeInfrastructure(uint16_t target_anchor, uint16_t finalMessageDelay) {
         RangeInfrastructureResult returnValue;
 
-        RangeResult result = tagFinishRange(target_anchor, finalMessageDelay);
+        RangeResult result = tagRangeSingle(target_anchor, finalMessageDelay);
         byte keep_going = 1;
 
         if(!result.success) {
@@ -237,7 +237,7 @@ namespace DW1000NgRTLS {
             returnValue = {false , 0};
         } else {
             while(result.success && result.next) {
-                result = tagFinishRange(result.next_anchor, finalMessageDelay);
+                result = tagRangeSingle(result.next_anchor, finalMessageDelay);
                 if(!result.success) {
                     keep_going = 0;
                     returnValue = {false , 0};
@@ -282,20 +282,13 @@ namespace DW1000NgRTLS {
         return {false, 0};
     }
 
-    RangeAcceptResult anchorRangeAccept(NextActivity next, uint16_t value) {
+    RangeAcceptResult anchorCompletePoll(byte poll_data[], size_t poll_len, NextActivity next, uint16_t value) {
         /* Upstream left this uninitialized, so a frame that is neither a poll
            nor a final response returned garbage in .success. */
         RangeAcceptResult returnValue = {false, 0, 0};
 
         double range;
-        if(!DW1000NgRTLS::receiveFrame()) {
-            returnValue = {false, 0, 0};
-        } else {
-
-            size_t poll_len = DW1000Ng::getReceivedDataLength();
-            byte poll_data[poll_len];
-            DW1000Ng::getReceivedData(poll_data, poll_len);
-
+        {
             if(poll_len > 9 && poll_data[9] == RANGING_TAG_POLL) {
                 uint64_t timePollReceived = DW1000Ng::getReceiveTimestamp();
                 DW1000NgRTLS::transmitResponseToPoll(&poll_data[7]);
@@ -346,6 +339,18 @@ namespace DW1000NgRTLS {
         }
 
         return returnValue;
+    }
+
+    RangeAcceptResult anchorRangeAccept(NextActivity next, uint16_t value) {
+        if(!DW1000NgRTLS::receiveFrame()) {
+            return {false, 0, 0};
+        }
+
+        size_t poll_len = DW1000Ng::getReceivedDataLength();
+        byte poll_data[poll_len];
+        DW1000Ng::getReceivedData(poll_data, poll_len);
+
+        return DW1000NgRTLS::anchorCompletePoll(poll_data, poll_len, next, value);
     }
 
 }
