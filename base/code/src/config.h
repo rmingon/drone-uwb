@@ -20,6 +20,30 @@
 #define DW1000_PIN_SS  5
 #define DW1000_PIN_RST 14
 
+/* ---------------------------------------------------------------- ranging --
+ * Every anchor needs its own ANCHOR_ADDRESS. Exactly one anchor is the main
+ * one: it is what tags blink at, and it hands them down the chain. Each anchor
+ * points at the next one, and the last of the chain sets ANCHOR_NEXT_ADDRESS
+ * to 0 so the tag goes back to blinking.
+ *
+ *   anchor 1 (main) -> anchor 2 -> anchor 3 -> back to blink
+ */
+#define ANCHOR_ADDRESS      1
+#define ANCHOR_IS_MAIN      1
+#define ANCHOR_NEXT_ADDRESS 2
+
+/* How often a tag restarts the cycle, in ms. Sent by the last anchor. */
+#define TAG_BLINK_RATE_MS 200
+
+/* Tags tracked at once, and the first short address handed out. */
+#define RANGING_MAX_TAGS          4
+#define RANGING_FIRST_TAG_ADDRESS 5
+
+/* Antenna delay in DW1000 units, roughly 4.7 mm each. 16436 is the generic
+ * value: calibrate per board against a known distance and either set it here or
+ * push it at runtime with {"antenna_delay": N}, which stores it in NVS. */
+#define DW1000_ANTENNA_DELAY 16436
+
 /* WS2812 status LEDs */
 #define LED_GPIO       17
 #define LED_COUNT      2
