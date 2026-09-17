@@ -151,7 +151,9 @@ static void reportRange(const ranging_measure_t &measure) {
     cJSON_AddNumberToObject(data, "rx_power", measure.rx_power);
     cJSON_AddNumberToObject(data, "fp_power", measure.fp_power);
     cJSON_AddBoolToObject(data, "los", measure.line_of_sight);
-    sendDataToServer("range", data);
+    /* A distance to another anchor describes the network itself, not a drone,
+       so the server files it separately. */
+    sendDataToServer(measure.is_anchor ? "peer" : "range", data);
 }
 
 /* ------------------------------------------------------------------------- */
@@ -226,7 +228,8 @@ static void loop() {
     if (ranging_poll(&measure)) {
         led_set_pixel(1, measure.line_of_sight ? LED_GREEN : LED_RED);
         reportRange(measure);
-        ESP_LOGI(TAG, "tag %u at %.2f m (raw %.2f, rx %.1f dBm, fp %.1f dBm%s)",
+        ESP_LOGI(TAG, "%s %u at %.2f m (raw %.2f, rx %.1f dBm, fp %.1f dBm%s)",
+                 measure.is_anchor ? "anchor" : "tag",
                  measure.tag_address, measure.range, measure.raw_range,
                  measure.rx_power, measure.fp_power, measure.line_of_sight ? "" : ", nlos");
     }

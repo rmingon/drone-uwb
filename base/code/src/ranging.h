@@ -21,6 +21,7 @@ typedef struct {
     float rx_power;       /* dBm */
     float fp_power;       /* first path power, dBm */
     bool line_of_sight;   /* false when rx and first path power disagree */
+    bool is_anchor;       /* the peer is another anchor, not a tag */
 } ranging_measure_t;
 
 typedef struct {

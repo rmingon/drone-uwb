@@ -115,6 +115,16 @@ namespace DW1000NgRTLS {
     /* Send a request range from tag to the rtls infrastructure */
     RangeRequestResult tagRangeRequest();
 
+    /* Completes an exchange whose poll has already been read off the air, for a
+       caller that had to inspect the frame before deciding what to do with it.
+       Must be called before any further receive, the poll timestamp is still in
+       the register. */
+    RangeAcceptResult anchorCompletePoll(byte poll_data[], size_t poll_len, NextActivity next, uint16_t value);
+
+    /* One exchange with one anchor, without walking the rest of the chain.
+       Used by an anchor measuring its distance to a peer. */
+    RangeResult tagRangeSingle(uint16_t anchor, uint16_t replyDelayUs);
+
     /* Used by an anchor to accept an incoming tagRangeRequest by means of the infrastructure
        NextActivity is used to indicate the tag what to do next after the ranging process (Activity finished is to return to blink (range request), 
         Continue range is to tell the tag to range a new anchor)
