@@ -54,6 +54,23 @@ Every anchor computes its own distance and pushes it to the server over UDP.
 Three clear distances are enough to place the drone on a plane, four to place it
 in space.
 
+### The anchors also measure each other
+
+Between tag cycles, each anchor plays tag towards its peers. That gives the
+distance matrix of the installation itself, and the server turns it into
+coordinates, so nobody has to measure a room with a tape:
+
+```
+   anchor 1 ---- 5.50 m ---- anchor 2        first anchor  -> origin
+      |  \                    /  |           second       -> on the X axis
+   5.10   7.00          4.62    7.23         third        -> in the XY plane
+      |        \      /         |            the rest     -> trilaterated
+   anchor 4 ---- 5.37 m ---- anchor 3
+```
+
+Distances alone cannot tell a layout from its mirror image, so the convention
+above is part of the answer rather than a measurement.
+
 ### Why the distance can be trusted
 
 | | |
@@ -73,8 +90,8 @@ in space.
 | [`base/code`](base/code) | Anchor firmware, ESP-IDF. Runs the ranging chain and reports distances. |
 | [`base/`](base) | Anchor board, with and without battery (KiCad) |
 | [`code/drone`](code/drone) | Drone firmware, Arduino. Flight control, plus the UWB tag on its own task. |
-| [`code/server`](code/server) | Bun server. Collects distances, keeps the live picture. |
-| [`code/front`](code/front) | Vue and TresJS 3D view |
+| [`code/server`](code/server) | Bun server. Collects distances, solves the layout and the drone positions. |
+| [`code/front`](code/front) | Web interface, Vue and TresJS 3D view |
 | [`drone_with_esc`](drone_with_esc) | Drone board with 30 A ESCs (KiCad) |
 | [`drone`](drone) | Drone board with integrated drivers (KiCad) |
 | [`drone_2s`](drone_2s) | Drone board for a 2S battery (KiCad) |
@@ -119,6 +136,12 @@ pio run -t upload
 cd code/server && bun install && bun run src/index.ts
 cd code/front  && bun install && bun run dev
 ```
+
+The interface shows the anchors, the distances they measure between themselves
+and the drones, in 3D. With no hardware running, open it with `?demo=1` to see
+it against generated data.
+
+![Interface](docs/interface.png)
 
 ---
 
@@ -200,7 +223,8 @@ Anchors talk to the server over UDP on port 7051, in both directions.
 | --- | --- | --- |
 | `anchor` | `{"address": 1, "main": true}` | at boot |
 | `tag` | `{"eui": "aabbccddeeff0001", "address": 5}` | main anchor, when it hands a short address to a tag |
-| `range` | `{"address": 5, "range": 3.42, "raw_range": 3.51, "rx_power": -82.3, "fp_power": -85.1, "los": true}` | every completed exchange |
+| `range` | `{"address": 5, "range": 3.42, "raw_range": 3.51, "rx_power": -82.3, "fp_power": -85.1, "los": true}` | every completed exchange with a tag |
+| `peer` | same shape, `address` being another anchor | every completed exchange with a peer anchor |
 
 **Server to anchor**:
 
@@ -222,8 +246,10 @@ to a drone.
 | --- | --- |
 | Anchor firmware, ESP-IDF | builds, not yet flown |
 | Two way ranging, both ends | builds, awaiting bench validation |
+| Anchor self survey | builds, not yet flown |
 | Distance collection on the server | working, covered by tests |
-| Trilateration | not implemented, anchor coordinates are not configured anywhere yet |
+| Anchor layout and drone position | working, covered by tests |
+| Web interface | working, 3D view of anchors, distances and drones |
 | Autonomous flight | the goal |
 
 ---
